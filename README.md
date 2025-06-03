@@ -1,10 +1,3 @@
-# 拾光集 - 精品网址导航站
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/c0200239-4b89-4f3f-9d5d-99f731661d7c" alt="拾光集Logo" width="200">
-</p>
-
-
 
 <p align="center">
   一个优雅的书签收藏与分享平台，基于Cloudflare Workers构建
@@ -28,24 +21,6 @@
 - 🔒 **安全认证** - 支持KV存储保存管理员凭据
 - 📊 **后台管理** - 完整的书签管理界面
 - 📤 **导入导出** - 支持批量导入导出书签
-
-## 🖼️ 预览图
-
-![image](https://github.com/user-attachments/assets/b12755c5-7669-408f-be05-2db6ba1b02cc)
-
-
-![image](https://github.com/user-attachments/assets/d387794d-95f8-42e9-879d-41fc6c5f5fa8)
-
-
-## 🚀 快速开始
-
-### 在线体验
-
-访问示例网站：https://nav.wangwangit.com
-
-管理员入口：https://nav.wangwangit.com/admin
-
-> **注意**: 示例站点仅供演示，请勿提交敏感信息
 
 ## 📦 部署指南
 
@@ -195,9 +170,7 @@ tailwind.config = {
 
 本项目采用 MIT 许可证 - 详情参见 [LICENSE](LICENSE) 文件
 
-## 📞 联系方式
 
-项目作者 - [@一只会飞的旺旺](https://github.com/wangwangit)
 
 项目链接: [https://github.com/wangwangit/nav](https://github.com/wangwangit/nav)
 
