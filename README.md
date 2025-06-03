@@ -97,7 +97,6 @@
 
 再回到首页,就能看到网站了!
 
-![image](https://github.com/user-attachments/assets/99c27184-6688-4464-b6c9-d29882927032)
 
 
 
