@@ -1665,6 +1665,7 @@ function renderSiteCard(site) {
                       })
                       .catch(console.error)
               </script>
+              <div id="hitokoto"><a href="#" target="_blank" id="hitokoto_text">疏影横斜水清浅，暗香浮动月黄昏。</a></div>
             </div>
           </div>
           
