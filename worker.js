@@ -1654,6 +1654,18 @@ function renderSiteCard(site) {
             <h2 class="text-xl font-semibold text-gray-800">
               ${catalog ? `${currentCatalog} · ${currentSites.length} 个网站` : `全部收藏 · ${sites.length} 个网站`}
             </h2>
+            <div class="text-sm text-gray-500 hidden md:block">
+              <script>
+                 fetch('https://v1.hitokoto.cn')
+                      .then(response => response.json())
+                      .then(data => {
+                       const hitokoto = document.getElementById('hitokoto_text')
+                      hitokoto.href = 'https://hitokoto.cn/?uuid=' + data.uuid
+                      hitokoto.innerText = data.hitokoto
+                      })
+                      .catch(console.error)
+              </script>
+            </div>
           </div>
           
           <!-- 网站卡片网格 -->
