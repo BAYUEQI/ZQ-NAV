@@ -439,7 +439,6 @@ function renderSiteCard(site) {
       <title>书签管理页面</title>
       <link rel="stylesheet" href="/static/admin.css">
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
-      <script defer src="https://umami.bayuedeqi.dpdns.org/script.js" data-website-id="2a9be188-d389-48c0-b820-a2dacdb2c4a2"></script>
     </head>
     <body>
       <div class="container">
@@ -1238,7 +1237,6 @@ function renderSiteCard(site) {
       <html lang="zh-CN">
       <head>
         <meta charset="UTF-8">
-        <script defer src="https://umami.bayuedeqi.dpdns.org/script.js" data-website-id="2a9be188-d389-48c0-b820-a2dacdb2c4a2"></script>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>管理员登录</title>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
@@ -1397,7 +1395,14 @@ function renderSiteCard(site) {
     <!DOCTYPE html>
     <html lang="zh-CN">
     <head>
-      <script defer src="https://umami.bayuedeqi.dpdns.org/script.js" data-website-id="2a9be188-d389-48c0-b820-a2dacdb2c4a2"></script>
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-P6R2D6FJF4"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-P6R2D6FJF4');
+      </script>
       <meta charset="UTF-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>琪舟阁 - 指路人，亦是摘星人</title>
