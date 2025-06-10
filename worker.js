@@ -32,6 +32,8 @@ export const fallbackSVGIcons = [
    </svg>`,
 ];
 
+
+
 function getRandomSVG() {
   return fallbackSVGIcons[Math.floor(Math.random() * fallbackSVGIcons.length)];
 }
@@ -97,7 +99,7 @@ function renderSiteCard(site) {
                         return this.errorResponse('Method Not Allowed', 405)
                 }
             }
-            if (path === `/pending/${id}` && /^\d+$/.test(id)) {
+              if (path.startsWith('/pending/') && /^\d+$/.test(id)) {
                 switch (method) {
                     case 'PUT':
                         return await this.approvePendingConfig(request, env, ctx, id);
@@ -127,14 +129,15 @@ function renderSiteCard(site) {
               const pageSize = parseInt(url.searchParams.get('pageSize') || '10', 10);
               const keyword = url.searchParams.get('keyword');
               const offset = (page - 1) * pageSize;
-              try {
-                  let query = `SELECT * FROM sites ORDER BY create_time DESC LIMIT ? OFFSET ?`;
+                            try {
+                  //- [优化] 调整了SQL查询语句，增加了 sort_order 排序
+                  let query = `SELECT * FROM sites ORDER BY sort_order ASC, create_time DESC LIMIT ? OFFSET ?`;
                   let countQuery = `SELECT COUNT(*) as total FROM sites`;
                   let queryBindParams = [pageSize, offset];
                   let countQueryParams = [];
   
                   if (catalog) {
-                      query = `SELECT * FROM sites WHERE catelog = ? ORDER BY create_time DESC LIMIT ? OFFSET ?`;
+                      query = `SELECT * FROM sites WHERE catelog = ? ORDER BY sort_order ASC, create_time DESC LIMIT ? OFFSET ?`;
                       countQuery = `SELECT COUNT(*) as total FROM sites WHERE catelog = ?`
                       queryBindParams = [catalog, pageSize, offset];
                       countQueryParams = [catalog];
@@ -142,13 +145,13 @@ function renderSiteCard(site) {
   
                   if (keyword) {
                       const likeKeyword = `%${keyword}%`;
-                      query = `SELECT * FROM sites WHERE name LIKE ? OR url LIKE ? OR catelog LIKE ? ORDER BY create_time DESC LIMIT ? OFFSET ?`;
+                      query = `SELECT * FROM sites WHERE name LIKE ? OR url LIKE ? OR catelog LIKE ? ORDER BY sort_order ASC, create_time DESC LIMIT ? OFFSET ?`;
                       countQuery = `SELECT COUNT(*) as total FROM sites WHERE name LIKE ? OR url LIKE ? OR catelog LIKE ?`;
                       queryBindParams = [likeKeyword, likeKeyword, likeKeyword, pageSize, offset];
                       countQueryParams = [likeKeyword, likeKeyword, likeKeyword];
   
                       if (catalog) {
-                          query = `SELECT * FROM sites WHERE catelog = ? AND (name LIKE ? OR url LIKE ? OR catelog LIKE ?) ORDER BY create_time DESC LIMIT ? OFFSET ?`;
+                          query = `SELECT * FROM sites WHERE catelog = ? AND (name LIKE ? OR url LIKE ? OR catelog LIKE ?) ORDER BY sort_order ASC, create_time DESC LIMIT ? OFFSET ?`;
                           countQuery = `SELECT COUNT(*) as total FROM sites WHERE catelog = ? AND (name LIKE ? OR url LIKE ? OR catelog LIKE ?)`;
                           queryBindParams = [catalog, likeKeyword, likeKeyword, likeKeyword, pageSize, offset];
                           countQueryParams = [catalog, likeKeyword, likeKeyword, likeKeyword];
@@ -207,9 +210,10 @@ function renderSiteCard(site) {
                     return this.errorResponse('Pending config not found', 404);
                 }
                  const config = results[0];
+                 //- [优化] 批准时，插入的数据也包含了 sort_order 的默认值
                 await env.NAV_DB.prepare(`
-                    INSERT INTO sites (name, url, logo, desc, catelog)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO sites (name, url, logo, desc, catelog, sort_order)
+                    VALUES (?, ?, ?, ?, ?, 9999) 
               `).bind(config.name, config.url, config.logo, config.desc, config.catelog).run();
                 await env.NAV_DB.prepare('DELETE FROM pending_sites WHERE id = ?').bind(id).run();
   
@@ -236,7 +240,7 @@ function renderSiteCard(site) {
                 return this.errorResponse(`Failed to reject pending config: ${e.message}`, 500);
             }
         },
-      async submitConfig(request, env, ctx) {
+       async submitConfig(request, env, ctx) {
           try{
               const config = await request.json();
               const { name, url, logo, desc, catelog } = config;
@@ -261,18 +265,21 @@ function renderSiteCard(site) {
           }
       },
       
+      
     async createConfig(request, env, ctx) {
           try{
               const config = await request.json();
-              const { name, url, logo, desc, catelog } = config;
+              //- [新增] 从请求体中获取 sort_order
+              const { name, url, logo, desc, catelog, sort_order } = config;
   
               if (!name || !url || !catelog ) {
                   return this.errorResponse('Name, URL and Catelog are required', 400);
               }
+              //- [优化] INSERT 语句增加了 sort_order 字段
               const insert = await env.NAV_DB.prepare(`
-                    INSERT INTO sites (name, url, logo, desc, catelog)
-                    VALUES (?, ?, ?, ?, ?)
-              `).bind(name, url, logo, desc, catelog).run();
+                    INSERT INTO sites (name, url, logo, desc, catelog, sort_order)
+                    VALUES (?, ?, ?, ?, ?, ?)
+              `).bind(name, url, logo, desc, catelog, sort_order || 9999).run(); // 如果sort_order未提供，则默认为9999
   
             return new Response(JSON.stringify({
               code: 201,
@@ -287,16 +294,19 @@ function renderSiteCard(site) {
           }
       },
   
-      async updateConfig(request, env, ctx, id) {
+  
+		async updateConfig(request, env, ctx, id) {
           try {
               const config = await request.json();
-              const { name, url, logo, desc, catelog } = config;
+              //- [新增] 从请求体中获取 sort_order
+              const { name, url, logo, desc, catelog, sort_order } = config;
   
+            //- [优化] UPDATE 语句增加了 sort_order 字段
             const update = await env.NAV_DB.prepare(`
                 UPDATE sites
-                SET name = ?, url = ?, logo = ?, desc = ?, catelog = ?, update_time = CURRENT_TIMESTAMP
+                SET name = ?, url = ?, logo = ?, desc = ?, catelog = ?, sort_order = ?, update_time = CURRENT_TIMESTAMP
                 WHERE id = ?
-            `).bind(name, url, logo, desc, catelog, id).run();
+            `).bind(name, url, logo, desc, catelog, sort_order || 9999, id).run();
             return new Response(JSON.stringify({
                 code: 200,
                 message: 'Config updated successfully',
@@ -322,24 +332,42 @@ function renderSiteCard(site) {
       async importConfig(request, env, ctx) {
         try {
           const jsonData = await request.json();
-  
-          if (!Array.isArray(jsonData)) {
-            return this.errorResponse('Invalid JSON data. Must be an array of site configurations.', 400);
+          let sitesToImport = [];
+
+          // [优化] 智能判断导入的JSON文件格式
+          // 1. 如果 jsonData 本身就是数组 (新的、正确的导出格式)
+          if (Array.isArray(jsonData)) {
+            sitesToImport = jsonData;
+          } 
+          // 2. 如果 jsonData 是一个对象，且包含一个名为 'data' 的数组 (兼容旧的导出格式)
+          else if (jsonData && typeof jsonData === 'object' && Array.isArray(jsonData.data)) {
+            sitesToImport = jsonData.data;
+          } 
+          // 3. 如果两种都不是，则格式无效
+          else {
+            return this.errorResponse('Invalid JSON data. Must be an array of site configurations, or an object with a "data" key containing the array.', 400);
           }
-  
-          const insertStatements = jsonData.map(item =>
+          
+          if (sitesToImport.length === 0) {
+            return new Response(JSON.stringify({
+              code: 200,
+              message: 'Import successful, but no data was found in the file.'
+            }), { headers: {'Content-Type': 'application/json'} });
+          }
+
+          const insertStatements = sitesToImport.map(item =>
                 env.NAV_DB.prepare(`
-                        INSERT INTO sites (name, url, logo, desc, catelog)
-                        VALUES (?, ?, ?, ?, ?)
-                  `).bind(item.name, item.url, item.logo, item.desc, item.catelog)
+                        INSERT INTO sites (name, url, logo, desc, catelog, sort_order)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                  `).bind(item.name || null, item.url || null, item.logo || null, item.desc || null, item.catelog || null, item.sort_order || 9999)
             )
   
-          // 使用 Promise.all 来并行执行所有插入操作
-          await Promise.all(insertStatements.map(stmt => stmt.run()));
+          // 使用 D1 的 batch 操作，效率更高
+          await env.NAV_DB.batch(insertStatements);
   
           return new Response(JSON.stringify({
               code: 201,
-              message: 'Config imported successfully'
+              message: `Config imported successfully. ${sitesToImport.length} items added.`
           }), {
               status: 201,
               headers: {'Content-Type': 'application/json'}
@@ -349,15 +377,20 @@ function renderSiteCard(site) {
         }
       },
   
-      async exportConfig(request, env, ctx) {
+async exportConfig(request, env, ctx) {
         try{
-          const { results } = await env.NAV_DB.prepare('SELECT * FROM sites ORDER BY create_time DESC').all();
-          return new Response(JSON.stringify({
-              code: 200,
-              data: results
-          }),{
+          // [优化] 导出的数据将不再被包裹在 {code, data} 对象中
+          const { results } = await env.NAV_DB.prepare('SELECT * FROM sites ORDER BY sort_order ASC, create_time DESC').all();
+          
+          // JSON.stringify 的第二和第三个参数用于“美化”输出的JSON，
+          // null 表示不替换任何值，2 表示使用2个空格进行缩进。
+          // 这使得导出的文件非常易于阅读和手动编辑。
+          const pureJsonData = JSON.stringify(results, null, 2); 
+
+          return new Response(pureJsonData, {
               headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json; charset=utf-8',
+                // 确保浏览器将其作为文件下载
                 'Content-Disposition': 'attachment; filename="config.json"'
               }
           });
@@ -432,17 +465,17 @@ function renderSiteCard(site) {
     async getFileContent(filePath) {
         const fileContents = {
            'admin.html': `<!DOCTYPE html>
-    <html lang="en">
+    <html lang="zh-CN">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>书签管理页面</title>
       <link rel="stylesheet" href="/static/admin.css">
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     </head>
     <body>
       <div class="container">
-          <h1></h1>
+          <h1>书签管理</h1>
       
           <div class="import-export">
             <input type="file" id="importFile" accept=".json" style="display:none;">
@@ -450,12 +483,14 @@ function renderSiteCard(site) {
             <button id="exportBtn">导出</button>
           </div>
       
+          <!-- [优化] 添加区域HTML结构，并新增排序输入框 -->
           <div class="add-new">
-            <input type="text" id="addName" placeholder="Name">
-            <input type="text" id="addUrl" placeholder="URL">
+            <input type="text" id="addName" placeholder="Name" required>
+            <input type="text" id="addUrl" placeholder="URL" required>
             <input type="text" id="addLogo" placeholder="Logo(optional)">
-             <input type="text" id="addDesc" placeholder="Description(optional)">
-            <input type="text" id="addCatelog" placeholder="Catelog">
+            <input type="text" id="addDesc" placeholder="Description(optional)">
+            <input type="text" id="addCatelog" placeholder="Catelog" required>
+            <input type="number" id="addSortOrder" placeholder="排序 (数字小靠前)">
             <button id="addBtn">添加</button>
           </div>
           <div id="message" style="display: none;padding:1rem;border-radius: 0.5rem;margin-bottom: 1rem;"></div>
@@ -475,6 +510,7 @@ function renderSiteCard(site) {
                                   <th>Logo</th>
                                   <th>Description</th>
                                   <th>Catelog</th>
+                                  <th>排序</th> <!-- [新增] 表格头增加排序 -->
                                   <th>Actions</th>
                                 </tr>
                             </thead>
@@ -522,9 +558,9 @@ function renderSiteCard(site) {
             'admin.css': `body {
         font-family: 'Noto Sans SC', sans-serif;
         margin: 0;
-        padding: 20px;
-        background-color: #f8f9fa; /* 更柔和的背景色 */
-        color: #212529; /* 深色文字 */
+        padding: 10px; /* [优化] 移动端边距 */
+        background-color: #f8f9fa;
+        color: #212529;
     }
     .modal {
         display: none;
@@ -538,17 +574,18 @@ function renderSiteCard(site) {
         background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
     }
     .modal-content {
-        background-color: #fff; /* 模态框背景白色 */
+        background-color: #fff;
         margin: 10% auto;
         padding: 20px;
-        border: 1px solid #dee2e6; /* 边框 */
-        width: 60%;
+        border: 1px solid #dee2e6;
+        width: 80%; /* [优化] 调整宽度以适应移动端 */
+        max-width: 600px;
         border-radius: 8px;
         position: relative;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* 阴影效果 */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     .modal-close {
-        color: #6c757d; /* 关闭按钮颜色 */
+        color: #6c757d;
         position: absolute;
         right: 10px;
         top: 0;
@@ -606,9 +643,9 @@ function renderSiteCard(site) {
     .modal-content button[type='submit']:hover {
         background-color: #0056b3; /* 悬停时颜色加深 */
     }
-    .container {
+.container {
         max-width: 1200px;
-        margin: 20px auto;
+        margin: 0 auto; /* [优化] 移动端居中 */
         background-color: #fff;
         padding: 20px;
         border-radius: 8px;
@@ -625,6 +662,7 @@ function renderSiteCard(site) {
     .tab-buttons {
         display: flex;
         margin-bottom: 10px;
+        flex-wrap: wrap; /* [优化] 移动端换行 */
     }
     .tab-button {
         background-color: #e9ecef;
@@ -658,15 +696,22 @@ function renderSiteCard(site) {
         gap: 10px;
         margin-bottom: 20px;
         justify-content: flex-end;
+        flex-wrap: wrap; /* [优化] 移动端换行 */
     }
     
+ /* [优化] 添加区域适配移动端 */
     .add-new {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
+        flex-wrap: wrap; /* 核心：允许换行 */
     }
     .add-new > input {
-        flex: 1;
+        flex: 1 1 150px; /* 弹性布局，基础宽度150px，允许伸缩 */
+        min-width: 150px; /* 最小宽度 */
+    }
+    .add-new > button {
+        flex-basis: 100%; /* 在移动端，按钮占据一整行 */
     }
     input[type="text"] {
         padding: 10px;
@@ -677,8 +722,22 @@ function renderSiteCard(site) {
         margin-bottom: 5px;
          transition: border-color 0.2s;
     }
-    input[type="text"]:focus {
-        border-color: #80bdff; /* 焦点边框颜色 */
+	   @media (min-width: 768px) {
+        .add-new > button {
+            flex-basis: auto; /* 在桌面端，按钮恢复自动宽度 */
+        }
+    }
+    input[type="text"], input[type="number"] {
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+        outline: none;
+        margin-bottom: 5px;
+         transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+        border-color: #80bdff;
         box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     }
     button {
@@ -694,12 +753,13 @@ function renderSiteCard(site) {
     button:hover {
         background-color: #534dc4;
     }
-    
+    /* [优化] 保证表格在小屏幕上可以横向滚动 */
     .table-wrapper {
         overflow-x: auto;
     }
     table {
         width: 100%;
+        min-width: 800px; /* 设置一个最小宽度，当屏幕小于此值时出现滚动条 */
         border-collapse: collapse;
         margin-bottom: 20px;
     }
@@ -776,6 +836,7 @@ function renderSiteCard(site) {
           const addLogo = document.getElementById('addLogo');
           const addDesc = document.getElementById('addDesc');
           const addCatelog = document.getElementById('addCatelog');
+		  const addSortOrder = document.getElementById('addSortOrder'); // [新增] 获取排序输入框
           
           const importBtn = document.getElementById('importBtn');
           const importFile = document.getElementById('importFile');
@@ -839,6 +900,8 @@ function renderSiteCard(site) {
                 <input type="text" id="editDesc"><br>
                 <label for="editCatelog">分类:</label>
                 <input type="text" id="editCatelog" required><br>
+			    <label for="editSortOrder">排序:</label> <!-- [新增] -->
+                <input type="number" id="editSortOrder"><br> <!-- [新增] -->
                 <button type="submit">保存</button>
               </form>
             </div>
@@ -859,7 +922,7 @@ function renderSiteCard(site) {
             const logo = document.getElementById('editLogo').value;
             const desc = document.getElementById('editDesc').value;
             const catelog = document.getElementById('editCatelog').value;
-          
+                const sort_order = document.getElementById('editSortOrder').value; // [新增]
             fetch(\`/api/config/\${id}\`, {
               method: 'PUT',
               headers: {
@@ -870,7 +933,8 @@ function renderSiteCard(site) {
                 url,
                 logo,
                 desc,
-                catelog
+                catelog,
+				sort_order // [新增]
               })
             }).then(res => res.json())
               .then(data => {
@@ -925,6 +989,7 @@ function renderSiteCard(site) {
                   <td>\${config.logo ? \`<img src="\${config.logo}" style="width:30px;" />\` : 'N/A'}</td>
                   <td>\${config.desc || 'N/A'}</td>
                   <td>\${config.catelog}</td>
+				 <td>\${config.sort_order === 9999 ? '默认' : config.sort_order}</td> <!-- [新增] 显示排序值 -->
                   <td class="actions">
                     <button class="edit-btn" data-id="\${config.id}">编辑</button>
                     <button class="del-btn" data-id="\${config.id}">删除</button>
@@ -951,24 +1016,25 @@ function renderSiteCard(site) {
           })
           }
           
+    // [优化] 点击编辑时，获取并填充排序字段
           function handleEdit(id) {
-               const row = document.querySelector(\`#configTableBody tr:nth-child(\${Array.from(configTableBody.children).findIndex(tr => tr.querySelector('.edit-btn[data-id="'+ id +'"]')) + 1})\`);
-            if (!row) return showMessage('找不到数据','error');
-            const name = row.querySelector('td:nth-child(2)').innerText;
-            const url = row.querySelector('td:nth-child(3) a').innerText;
-            const logo = row.querySelector('td:nth-child(4) img')?.src || '';
-            const desc = row.querySelector('td:nth-child(5)').innerText === 'N/A' ? '' : row.querySelector('td:nth-child(5)').innerText;
-            const catelog = row.querySelector('td:nth-child(6)').innerText;
-          
-          
-            // 填充表单数据
-            document.getElementById('editId').value = id;
-            document.getElementById('editName').value = name;
-            document.getElementById('editUrl').value = url;
-            document.getElementById('editLogo').value = logo;
-            document.getElementById('editDesc').value = desc;
-            document.getElementById('editCatelog').value = catelog;
-            editModal.style.display = 'block';
+            fetch(\`/api/config?page=1&pageSize=1000\`) // A simple way to get all configs to find the one to edit
+            .then(res => res.json())
+            .then(data => {
+                const configToEdit = data.data.find(c => c.id == id);
+                if (!configToEdit) {
+                    showMessage('找不到要编辑的数据', 'error');
+                    return;
+                }
+                document.getElementById('editId').value = configToEdit.id;
+                document.getElementById('editName').value = configToEdit.name;
+                document.getElementById('editUrl').value = configToEdit.url;
+                document.getElementById('editLogo').value = configToEdit.logo || '';
+                document.getElementById('editDesc').value = configToEdit.desc || '';
+                document.getElementById('editCatelog').value = configToEdit.catelog;
+                document.getElementById('editSortOrder').value = configToEdit.sort_order === 9999 ? '' : configToEdit.sort_order; // [新增]
+                editModal.style.display = 'block';
+            });
           }
           function handleDelete(id) {
             if(!confirm('确认删除？')) return;
@@ -1017,6 +1083,7 @@ function renderSiteCard(site) {
             const logo = addLogo.value;
             const desc = addDesc.value;
              const catelog = addCatelog.value;
+          const sort_order = addSortOrder.value; // [新增]			 
             if(!name ||    !url || !catelog) {
               showMessage('名称,URL,分类 必填', 'error');
               return;
@@ -1041,6 +1108,7 @@ function renderSiteCard(site) {
                 addLogo.value = '';
                 addDesc.value = '';
                  addCatelog.value = '';
+        addSortOrder.value = ''; // [新增]				 
                  fetchConfigs();
              }else {
                 showMessage(data.message, 'error');
@@ -1237,84 +1305,127 @@ function renderSiteCard(site) {
       <html lang="zh-CN">
       <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>管理员登录</title>
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-          body {
+          /* [优化] 全局重置与现代CSS最佳实践 */
+          *, *::before, *::after {
+            box-sizing: border-box;
+          }
+          
+          html, body {
+            height: 100%; /* 确保flex容器能撑满整个屏幕 */
+            margin: 0;
+            padding: 0;
             font-family: 'Noto Sans SC', sans-serif;
-            background-color: #f8f9fa;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+          }
+
+          /* [优化] 主体布局，确保在任何设备上都完美居中 */
+          body {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            background-color: #f8f9fa;
+            padding: 1rem; /* 为小屏幕提供安全边距 */
           }
+
+          /* [优化] 登录容器样式 */
           .login-container {
             background-color: white;
             padding: 2rem;
             border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px M10px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0,0,0,0.08);
             width: 100%;
-            max-width: 360px;
+            max-width: 380px;
+            animation: fadeIn 0.5s ease-out;
           }
+          
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
           .login-title {
-            font-size: 1.5rem;
+            font-size: 1.75rem; /* 稍大一点更醒目 */
+            font-weight: 700;
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin: 0 0 1.5rem 0;
             color: #333;
           }
+
           .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
           }
+
           label {
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
             color: #555;
           }
-          input {
+
+          input[type="text"], input[type="password"] {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.875rem 1rem; /* 调整内边距，手感更好 */
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 6px; /* 稍大的圆角 */
             font-size: 1rem;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, box-shadow 0.2s;
           }
+
           input:focus {
             border-color: #7209b7;
             outline: none;
-            box-shadow: 0 0 0 2px rgba(114, 9, 183, 0.2);
+            box-shadow: 0 0 0 3px rgba(114, 9, 183, 0.15);
           }
+
           button {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.875rem;
             background-color: #7209b7;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.1s;
           }
+
           button:hover {
             background-color: #5a067c;
           }
+          
+          button:active {
+            transform: scale(0.98);
+          }
+
           .error-message {
             color: #dc3545;
             font-size: 0.875rem;
             margin-top: 0.5rem;
+            text-align: center;
             display: none;
           }
+
           .back-link {
             display: block;
             text-align: center;
-            margin-top: 1rem;
+            margin-top: 1.5rem;
             color: #7209b7;
             text-decoration: none;
             font-size: 0.875rem;
           }
+
           .back-link:hover {
             text-decoration: underline;
           }
@@ -1333,7 +1444,7 @@ function renderSiteCard(site) {
               <input type="password" id="password" name="password" required>
             </div>
             <div class="error-message" id="errorMessage">用户名或密码错误</div>
-            <button type="submit">登录</button>
+            <button type="submit">登 录</button>
           </form>
           <a href="/" class="back-link">返回首页</a>
         </div>
@@ -1389,20 +1500,11 @@ function renderSiteCard(site) {
     // 根据 URL 参数筛选站点
     const currentCatalog = catalog || catalogs[0];
     const currentSites = catalog ? sites.filter(s => s.catelog === currentCatalog) : sites;
-
     // 优化后的 HTML
     const html = `
     <!DOCTYPE html>
     <html lang="zh-CN">
     <head>
-      <script async src="https://www.googletagmanager.com/gtag/js?id=G-P6R2D6FJF4"></script>
-      <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-
-        gtag('config', 'G-P6R2D6FJF4');
-      </script>
       <meta charset="UTF-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>琪舟阁 - 指路人，亦是摘星人</title>
@@ -1681,12 +1783,12 @@ function renderSiteCard(site) {
                 <div class="p-5">
                   <a href="${site.url}" target="_blank" class="block">
                     <div class="flex items-start">
-                      <div class="flex-shrink-0 mr-4">
-                        ${site.logo 
-                          ? `<img src="${site.logo}" alt="${site.name}" class="w-10 h-10 rounded-lg object-cover">`
-                          : `<div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-accent-400 flex items-center justify-center text-white font-bold text-lg">${site.name.charAt(0)}</div>`
-                        }
-                      </div>
+                    <div class="flex-shrink-0 mr-4">
+                    ${site.logo 
+                      ? `<img src="${site.logo}" alt="${site.name}" class="w-10 h-10 rounded-lg object-cover bg-gray-100">`
+                      : `<div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-accent-400 flex items-center justify-center text-white font-bold text-lg">${site.name.charAt(0).toUpperCase()}</div>`
+                    }
+                  </div>
                       <div class="flex-1 min-w-0">
                         <h3 class="text-base font-medium text-gray-900 truncate">${site.name}</h3>
                         <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
@@ -1719,7 +1821,7 @@ function renderSiteCard(site) {
           <div class="max-w-5xl mx-auto text-center">
             <p class="text-gray-500">© ${new Date().getFullYear()} 琪舟阁 | 愿你在此找到方向</p>
             <div class="mt-4 flex justify-center space-x-6">
-              <a href="https://blog.520jacky.ip-ddns.com" target="_blank" class="text-gray-400 hover:text-primary-500 transition-colors">
+              <a href="https://blog.520jacky.ip-ddns.com/" target="_blank" class="text-gray-400 hover:text-primary-500 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
@@ -2015,9 +2117,9 @@ function renderSiteCard(site) {
     </html>
     `;
 
-return new Response(html, {
-  headers: { 'content-type': 'text/html; charset=utf-8' }
-});
+    return new Response(html, {
+      headers: { 'content-type': 'text/html; charset=utf-8' }
+    });
 }
 
 
