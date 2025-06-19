@@ -382,7 +382,7 @@ async exportConfig(request, env, ctx) {
           // [优化] 导出的数据将不再被包裹在 {code, data} 对象中
           const { results } = await env.NAV_DB.prepare('SELECT * FROM sites ORDER BY sort_order ASC, create_time DESC').all();
           
-          // JSON.stringify 的第二和第三个参数用于“美化”输出的JSON，
+          // JSON.stringify 的第二和第三个参数用于"美化"输出的JSON，
           // null 表示不替换任何值，2 表示使用2个空格进行缩进。
           // 这使得导出的文件非常易于阅读和手动编辑。
           const pureJsonData = JSON.stringify(results, null, 2); 
@@ -1698,14 +1698,14 @@ async exportConfig(request, env, ctx) {
           <div>
             <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">分类导航</h3>
             <div class="space-y-1">
-              <a href="?" class="flex items-center px-3 py-2 rounded-lg ${!catalog ? 'bg-primary-100 text-primary-700' : 'hover:bg-gray-100'} w-full">
+              <a href="?" class="flex items-center px-3 py-2 rounded-lg w-full border-2 border-primary-100 bg-gradient-to-r from-white via-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-colors duration-200 ${!catalog ? 'bg-primary-100 text-primary-700' : 'hover:bg-gray-100'}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 ${!catalog ? 'text-primary-500' : 'text-gray-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
                 全部
               </a>
               ${catalogs.map(cat => `
-                <a href="?catalog=${cat}" class="flex items-center px-3 py-2 rounded-lg ${cat === currentCatalog && catalog ? 'bg-primary-100 text-primary-700' : 'hover:bg-gray-100'} w-full">
+                <a href="?catalog=${cat}" class="flex items-center px-3 py-2 rounded-lg w-full border-2 border-primary-100 bg-gradient-to-r from-white via-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-colors duration-200 ${cat === currentCatalog && catalog ? 'bg-primary-100 text-primary-700' : 'hover:bg-gray-100'}">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 ${cat === currentCatalog && catalog ? 'text-primary-500' : 'text-gray-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
@@ -1716,21 +1716,18 @@ async exportConfig(request, env, ctx) {
           </div>
           
           <div class="mt-8 pt-6 border-t border-gray-200">
-            <button id="addSiteBtnSidebar" class="w-full flex items-center justify-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition duration-300">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
+            <button id="addSiteBtnSidebar" class="w-full flex items-center justify-center px-4 py-2 bg-gradient-to-r from-white via-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-primary-700 rounded-lg border-2 border-primary-100 shadow-sm transition duration-300">
               添加新书签
             </button>
             
-            <a href="https://blog.520jacky.ip-ddns.com" target="_blank" class="mt-4 flex items-center px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300">
+            <a href="https://blog.520jacky.ip-ddns.com" target="_blank" class="mt-4 flex items-center px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300 w-full border-2 border-primary-100 bg-gradient-to-r from-white via-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
               访问博客
             </a>
 
-            <a href="/admin" target="_blank" class="mt-4 flex items-center px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300">
+            <a href="/admin" target="_blank" class="mt-4 flex items-center px-4 py-2 text-gray-600 hover:text-primary-500 transition duration-300 w-full border-2 border-primary-100 bg-gradient-to-r from-white via-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
@@ -1741,73 +1738,57 @@ async exportConfig(request, env, ctx) {
       </aside>
       
       <!-- 主内容区 -->
-      <main class="main-content lg:ml-64 min-h-screen transition-all duration-300">
+      <main class="main-content lg:ml-64 min-h-screen transition-all duration-300 bg-gradient-to-br from-primary-50 via-accent-50 to-secondary-100">
         <!-- 顶部横幅 -->
-        <header class="bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 text-white py-8 px-6 md:px-10">
-          <div class="max-w-5xl mx-auto">
-            <div class="flex flex-col md:flex-row items-center justify-center">
-              <div class="text-center">
-                <h1 class="text-3xl md:text-4xl font-bold mb-2">琪舟阁</h1>
-                <p class="text-primary-100 max-w-xl">万千星河，总有一束光，指向你未曾抵达的远方</p>
-              </div>
-            </div>
+        <header class="relative overflow-hidden py-14 px-6 md:px-12 flex flex-col items-center justify-center bg-gradient-to-r from-primary-500 via-secondary-400 to-accent-400 shadow-xl">
+          <div class="absolute inset-0 z-0" style="background: linear-gradient(120deg,rgba(255,255,255,0.08) 0%,rgba(76,201,240,0.12) 60%,rgba(114,9,183,0.10) 100%);"></div>
+          <div class="relative z-10 text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-4 bg-gradient-to-r from-primary-300 via-secondary-500 to-accent-400 bg-clip-text text-transparent drop-shadow-lg animate-gradient-text">琪舟阁</h1>
+            <p class="text-lg md:text-xl font-light bg-gradient-to-r from-primary-100 via-secondary-200 to-accent-200 bg-clip-text text-transparent mb-2">万千星河，总有一束光，指向你未曾抵达的远方</p>
           </div>
         </header>
-        
         <!-- 网站列表 -->
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <section class="max-w-7xl mx-auto px-4 sm:px-8 py-14">
           <!-- 当前分类/搜索提示 -->
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-semibold text-gray-800">
-              ${catalog ? `${currentCatalog} · ${currentSites.length} 个网站` : `全部收藏 · ${sites.length} 个网站`}
+          <div class="flex flex-col sm:flex-row items-center justify-between mb-10 gap-4">
+            <h2 class="text-2xl md:text-3xl font-bold flex items-center gap-2 bg-gradient-to-r from-primary-400 via-secondary-500 to-accent-400 bg-clip-text text-transparent">
+              <span id="siteCount">${catalog ? `${currentCatalog} · ${currentSites.length} 个网站` : `全部收藏 · ${sites.length} 个网站`}</span>
             </h2>
-            <div class="text-sm text-gray-500 hidden md:block">
-              <script>
-                 fetch('https://v1.hitokoto.cn')
-                      .then(response => response.json())
-                      .then(data => {
-                       const hitokoto = document.getElementById('hitokoto_text')
-                      hitokoto.href = 'https://hitokoto.cn/?uuid=' + data.uuid
-                      hitokoto.innerText = data.hitokoto
-                      })
-                      .catch(console.error)
-              </script>
-              <div id="hitokoto"><a href="#" target="_blank" id="hitokoto_text">疏影横斜水清浅，暗香浮动月黄昏。</a></div>
+            <div class="text-sm px-5 py-2 rounded-full shadow-lg flex items-center gap-2 bg-gradient-to-r from-primary-200 via-secondary-100 to-accent-100 border border-primary-100">
+              <span id="hitokoto"><a href="https://github.com/BAYUEQI" target="_blank" id="hitokoto_text" class="bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent font-semibold">指路人，亦是摘星人</a></span>
             </div>
           </div>
-          
           <!-- 网站卡片网格 -->
-          <div id="sitesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div id="sitesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             ${currentSites.map(site => `
-              <div class="site-card group bg-white rounded-xl shadow hover:shadow-lg overflow-hidden" data-id="${site.id}" data-name="${site.name}" data-url="${site.url}" data-catalog="${site.catelog}">
-                <div class="p-5">
+              <div class="site-card group rounded-3xl shadow-2xl border-2 border-transparent hover:border-accent-300 bg-gradient-to-br from-white via-primary-50 to-accent-50 hover:from-primary-100 hover:to-accent-100 transition-all duration-300 relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-primary-200 via-accent-100 to-secondary-100 rounded-full opacity-30 blur-2xl z-0"></div>
+                <div class="p-7 relative z-10 flex flex-col h-full">
                   <a href="${site.url}" target="_blank" class="block">
-                    <div class="flex items-start">
-                    <div class="flex-shrink-0 mr-4">
-                    ${site.logo 
-                      ? `<img src="${site.logo}" alt="${site.name}" class="w-10 h-10 rounded-lg object-cover bg-gray-100">`
-                      : `<div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-accent-400 flex items-center justify-center text-white font-bold text-lg">${site.name.charAt(0).toUpperCase()}</div>`
-                    }
-                  </div>
+                    <div class="flex items-center mb-4">
+                      <div class="flex-shrink-0 mr-5">
+                        ${site.logo 
+                          ? `<img src="${site.logo}" alt="${site.name}" class="w-16 h-16 rounded-2xl object-cover bg-gradient-to-br from-primary-100 to-accent-100 shadow-lg border-2 border-primary-200">`
+                          : `<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 via-secondary-400 to-accent-400 flex items-center justify-center text-white font-extrabold text-3xl shadow-lg border-2 border-primary-200">${site.name.charAt(0).toUpperCase()}</div>`
+                        }
+                      </div>
                       <div class="flex-1 min-w-0">
-                        <h3 class="text-base font-medium text-gray-900 truncate">${site.name}</h3>
-                        <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                        <h3 class="text-lg font-bold bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 bg-clip-text text-transparent truncate">${site.name}</h3>
+                        <span class="inline-flex items-center px-3 py-1 mt-2 rounded-full text-xs font-bold bg-gradient-to-r from-primary-200 via-secondary-200 to-accent-200 text-primary-800 shadow border border-primary-100">
                           ${site.catelog}
                         </span>
                       </div>
                     </div>
-                    
-                    <p class="mt-2 text-sm text-gray-500 line-clamp-2" title="${site.desc || '暂无描述'}">${site.desc || '暂无描述'}</p>
+                    <p class="mt-2 text-sm text-gray-700 line-clamp-2 bg-gradient-to-r from-primary-50 via-accent-50 to-secondary-100 rounded-lg px-2 py-1 shadow-inner" title="${site.desc || '暂无描述'}">${site.desc || '暂无描述'}</p>
                   </a>
-                  
-                  <div class="mt-3 flex items-center justify-between">
-                    <span class="text-xs text-gray-500 truncate max-w-[140px]">${site.url}</span>
-                    <button class="copy-btn flex items-center px-2 py-1 bg-primary-100 text-primary-600 hover:bg-primary-200 rounded-full text-xs font-medium transition-colors" data-url="${site.url}">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div class="mt-auto flex items-center justify-between pt-5">
+                    <span class="text-xs text-gray-400 truncate max-w-[140px] font-mono">${site.url}</span>
+                    <button class="copy-btn flex items-center px-3 py-1 bg-gradient-to-r from-primary-300 via-secondary-200 to-accent-200 text-primary-700 hover:from-accent-300 hover:to-primary-200 rounded-full text-xs font-bold transition-all duration-200 shadow-md border border-primary-200 relative group/copy" data-url="${site.url}">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                       </svg>
                       复制
-                      <span class="copy-success hidden absolute -top-8 right-0 bg-green-500 text-white text-xs px-2 py-1 rounded shadow-md">已复制!</span>
+                      <span class="copy-success hidden absolute -top-8 right-0 bg-gradient-to-r from-green-400 to-accent-400 text-white text-xs px-2 py-1 rounded shadow-md">已复制!</span>
                     </button>
                   </div>
                 </div>
@@ -1815,14 +1796,14 @@ async exportConfig(request, env, ctx) {
             `).join('')}
           </div>
         </section>
-        
         <!-- 页脚 -->
-        <footer class="bg-white py-8 px-6 mt-12 border-t border-gray-200">
+        <footer class="bg-gradient-to-r from-primary-50 via-secondary-50 to-accent-50 py-10 px-6 mt-20 border-t-4 border-gradient-to-r from-primary-200 via-secondary-200 to-accent-200 shadow-inner">
           <div class="max-w-5xl mx-auto text-center">
-            <p class="text-gray-500">© ${new Date().getFullYear()} 琪舟阁 | 愿你在此找到方向</p>
-            <div class="mt-4 flex justify-center space-x-6">
+            <div class="w-full h-2 bg-gradient-to-r from-primary-200 via-secondary-200 to-accent-200 rounded-full mb-8 opacity-80"></div>
+            <p class="text-lg font-bold bg-gradient-to-r from-primary-400 via-secondary-500 to-accent-400 bg-clip-text text-transparent">© ${new Date().getFullYear()} 琪舟阁 | 愿你在此找到方向</p>
+            <div class="mt-6 flex justify-center space-x-8">
               <a href="https://blog.520jacky.ip-ddns.com/" target="_blank" class="text-gray-400 hover:text-primary-500 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </a>
@@ -1830,9 +1811,20 @@ async exportConfig(request, env, ctx) {
           </div>
         </footer>
       </main>
+      <style>
+        /* 只保留主标题轻微动画，其余全部静态渐变，提升性能 */
+        @keyframes gradient-text {
+          0% { filter: brightness(1) saturate(1); }
+          50% { filter: brightness(1.15) saturate(1.2); }
+          100% { filter: brightness(1) saturate(1); }
+        }
+        .animate-gradient-text {
+          animation: gradient-text 3s ease-in-out infinite;
+        }
+      </style>
       
       <!-- 返回顶部按钮 -->
-      <button id="backToTop" class="fixed bottom-8 right-8 p-3 rounded-full bg-primary-500 text-white shadow-lg opacity-0 invisible transition-all duration-300 hover:bg-primary-600">
+      <button id="backToTop" class="fixed bottom-8 right-8 p-3 rounded-full bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 text-white shadow-lg opacity-0 invisible transition-all duration-300 hover:brightness-110 hover:shadow-2xl border-2 border-primary-200">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 19l7-7 7 7" />
         </svg>
@@ -1840,53 +1832,43 @@ async exportConfig(request, env, ctx) {
       
       <!-- 添加网站模态框 -->
       <div id="addSiteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 opacity-0 invisible transition-all duration-300">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 transform translate-y-8 transition-all duration-300">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-xl font-semibold text-gray-900">添加新书签</h2>
-              <button id="closeModal" class="text-gray-400 hover:text-gray-500">
+        <div class="w-full max-w-md mx-4 transform translate-y-8 transition-all duration-300 rounded-2xl shadow-2xl border-2 border-blue-100 bg-gradient-to-br from-white via-blue-50 to-blue-100">
+          <div class="p-8">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl font-bold bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 bg-clip-text text-transparent">添加新书签</h2>
+              <button id="closeModal" class="text-gray-400 hover:text-primary-500 transition-colors rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-primary-200">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            
-            <form id="addSiteForm" class="space-y-4">
+            <form id="addSiteForm" class="space-y-5">
               <div>
-                <label for="addSiteName" class="block text-sm font-medium text-gray-700">名称</label>
-                <input type="text" id="addSiteName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                <label for="addSiteName" class="block text-sm font-medium text-gray-700 mb-1">名称</label>
+                <input type="text" id="addSiteName" required class="mt-1 block w-full px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"/>
               </div>
-              
               <div>
-                <label for="addSiteUrl" class="block text-sm font-medium text-gray-700">网址</label>
-                <input type="text" id="addSiteUrl" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                <label for="addSiteUrl" class="block text-sm font-medium text-gray-700 mb-1">网址</label>
+                <input type="text" id="addSiteUrl" required class="mt-1 block w-full px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"/>
               </div>
-              
               <div>
-                <label for="addSiteLogo" class="block text-sm font-medium text-gray-700">Logo (可选)</label>
-                <input type="text" id="addSiteLogo" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                <label for="addSiteLogo" class="block text-sm font-medium text-gray-700 mb-1">Logo (可选)</label>
+                <input type="text" id="addSiteLogo" class="mt-1 block w-full px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"/>
               </div>
-              
               <div>
-                <label for="addSiteDesc" class="block text-sm font-medium text-gray-700">描述 (可选)</label>
-                <textarea id="addSiteDesc" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"></textarea>
+                <label for="addSiteDesc" class="block text-sm font-medium text-gray-700 mb-1">描述 (可选)</label>
+                <textarea id="addSiteDesc" rows="2" class="mt-1 block w-full px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"></textarea>
               </div>
-              
               <div>
-                <label for="addSiteCatelog" class="block text-sm font-medium text-gray-700">分类</label>
-                <input type="text" id="addSiteCatelog" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" list="catalogList">
+                <label for="addSiteCatelog" class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                <input type="text" id="addSiteCatelog" required class="mt-1 block w-full px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition" list="catalogList"/>
                 <datalist id="catalogList">
                   ${catalogs.map(cat => `<option value="${cat}">`).join('')}
                 </datalist>
               </div>
-              
-              <div class="flex justify-end pt-4">
-                <button type="button" id="cancelAddSite" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 mr-3">
-                  取消
-                </button>
-                <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                  提交
-                </button>
+              <div class="flex justify-end pt-6 gap-3">
+                <button type="button" id="cancelAddSite" class="bg-gray-100 text-gray-600 border border-gray-200 rounded-lg px-5 py-2 font-medium hover:bg-gray-200 transition">取消</button>
+                <button type="submit" class="inline-flex justify-center px-6 py-2 border-2 border-primary-200 shadow-sm text-sm font-bold rounded-lg text-white bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 hover:from-primary-500 hover:to-accent-500 focus:outline-none focus:ring-2 focus:ring-primary-200 transition">提交</button>
               </div>
             </form>
           </div>
