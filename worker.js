@@ -1484,7 +1484,7 @@ async exportConfig(request, env, ctx) {
 
     let sites = [];
     try {
-      const { results } = await env.NAV_DB.prepare('SELECT * FROM sites ORDER BY create_time').all();
+      const { results } = await env.NAV_DB.prepare('SELECT * FROM sites ORDER BY sort_order ASC, create_time DESC').all();
       sites = results;
     } catch (e) {
       return new Response(`Failed to fetch data: ${e.message}`, { status: 500 });
