@@ -472,6 +472,159 @@ async exportConfig(request, env, ctx) {
       <title>书签管理页面</title>
       <link rel="stylesheet" href="/static/admin.css">
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+      <style>
+        body {
+          min-height: 100vh;
+          background: linear-gradient(120deg, #f8fafc 0%, #e3f0ff 100%);
+        }
+        .container {
+          background: rgba(255,255,255,0.85);
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+          border-radius: 2rem;
+          backdrop-filter: blur(12px) saturate(1.2);
+          -webkit-backdrop-filter: blur(12px) saturate(1.2);
+          margin-top: 40px;
+          margin-bottom: 40px;
+        }
+        h1 {
+          background: linear-gradient(90deg, #6c63ff 0%, #4cc9f0 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          color: transparent;
+          font-size: 2.2rem;
+          font-weight: 700;
+          margin-bottom: 2rem;
+        }
+        .tab-buttons .tab-button.active {
+          background: linear-gradient(90deg, #e3f0ff 0%, #f8fafc 100%);
+          color: #6c63ff;
+          font-weight: bold;
+        }
+        .tab-button {
+          border-radius: 1.2rem 1.2rem 0 0;
+          margin-right: 8px;
+          font-size: 1rem;
+        }
+        .add-new > input, .add-new > button {
+          border-radius: 1.2rem;
+        }
+        .add-new > button {
+          background: linear-gradient(90deg, #6c63ff 0%, #4cc9f0 100%);
+          color: #fff;
+          font-weight: 600;
+          box-shadow: 0 2px 8px rgba(76,201,240,0.10);
+        }
+        .add-new > button:hover {
+          background: linear-gradient(90deg, #4cc9f0 0%, #6c63ff 100%);
+        }
+        .import-export button {
+          border-radius: 1.2rem;
+          background: #f0f4fa;
+          color: #6c63ff;
+          font-weight: 600;
+          border: 1px solid #e3e3e3;
+        }
+        .import-export button:hover {
+          background: #e3f0ff;
+        }
+        .table-wrapper {
+          background: rgba(255,255,255,0.7);
+          border-radius: 1.2rem;
+          box-shadow: 0 2px 8px rgba(76,201,240,0.06);
+          padding: 1rem 0.5rem;
+        }
+        table {
+          background: transparent;
+          border-radius: 1.2rem;
+          table-layout: fixed;
+          width: 100%;
+        }
+        th, td {
+          border: none;
+          border-bottom: 1px solid #f0f0f0;
+          padding: 12px 10px;
+          word-break: break-all;
+        }
+        th {
+          background: #f8fafc;
+          color: #6c63ff;
+          font-weight: 700;
+        }
+        td.url-cell {
+          max-width: 180px;
+          min-width: 120px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        td.sort-cell {
+          max-width: 60px;
+          min-width: 40px;
+          text-align: center;
+          white-space: nowrap;
+        }
+        td.name-cell, td.desc-cell, td.catelog-cell {
+          max-width: 120px;
+          min-width: 80px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        tr:last-child td {
+          border-bottom: none;
+        }
+        tr {
+          transition: background 0.2s;
+        }
+        tr:hover {
+          background: #f0f4fa;
+        }
+        .actions button, .pagination button {
+          border-radius: 1.2rem;
+          font-size: 0.95rem;
+        }
+        .edit-btn {
+          background: #4cc9f0;
+        }
+        .edit-btn:hover {
+          background: #6c63ff;
+        }
+        .del-btn {
+          background: #ff6b81;
+        }
+        .del-btn:hover {
+          background: #e63946;
+        }
+        .pagination button {
+          background: #f0f4fa;
+          color: #6c63ff;
+          border: 1px solid #e3e3e3;
+        }
+        .pagination button:hover {
+          background: #e3f0ff;
+        }
+        #message.success {
+          background: #d1fae5;
+          color: #065f46;
+        }
+        #message.error {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+        @media (max-width: 700px) {
+          .container {
+            border-radius: 0.7rem;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            padding: 8px;
+          }
+          .table-wrapper {
+            border-radius: 0.7rem;
+            padding: 0.3rem 0.1rem;
+          }
+        }
+      </style>
     </head>
     <body>
       <div class="container">
@@ -510,7 +663,7 @@ async exportConfig(request, env, ctx) {
                                   <th>Logo</th>
                                   <th>Description</th>
                                   <th>Catelog</th>
-                                  <th>排序</th> <!-- [新增] 表格头增加排序 -->
+                                  <th class="sort-th">排序</th> <!-- [新增] 表格头增加排序 -->
                                   <th>Actions</th>
                                 </tr>
                             </thead>
@@ -571,77 +724,105 @@ async exportConfig(request, env, ctx) {
         width: 100%;
         height: 100%;
         overflow: auto;
-        background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
+        background-color: rgba(0, 0, 0, 0.35); /* 更柔和的半透明背景 */
+        backdrop-filter: blur(2px);
     }
     .modal-content {
-        background-color: #fff;
-        margin: 10% auto;
-        padding: 20px;
-        border: 1px solid #dee2e6;
-        width: 80%; /* [优化] 调整宽度以适应移动端 */
-        max-width: 600px;
-        border-radius: 8px;
+        background: rgba(255,255,255,0.92);
+        margin: 8% auto;
+        padding: 32px 24px 24px 24px;
+        border: none;
+        width: 95%;
+        max-width: 420px;
+        border-radius: 1.5rem;
         position: relative;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 32px 0 rgba(76,201,240,0.18);
+        backdrop-filter: blur(16px) saturate(1.2);
+        -webkit-backdrop-filter: blur(16px) saturate(1.2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: fadeInModal 0.4s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes fadeInModal {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .modal-content h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.2rem;
+        background: linear-gradient(90deg, #6c63ff 0%, #4cc9f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: transparent;
+        text-align: center;
+        letter-spacing: 1px;
     }
     .modal-close {
         color: #6c757d;
         position: absolute;
-        right: 10px;
-        top: 0;
+        right: 18px;
+        top: 10px;
         font-size: 28px;
         font-weight: bold;
         cursor: pointer;
         transition: color 0.2s;
     }
-    
     .modal-close:hover,
     .modal-close:focus {
-        color: #343a40; /* 悬停时颜色加深 */
+        color: #343a40;
         text-decoration: none;
         cursor: pointer;
     }
     .modal-content form {
         display: flex;
         flex-direction: column;
+        width: 100%;
+        align-items: center;
     }
-    
     .modal-content form label {
         margin-bottom: 5px;
-        font-weight: 500; /* 字重 */
-        color: #495057; /* 标签颜色 */
+        font-weight: 500;
+        color: #495057;
+        align-self: flex-start;
     }
     .modal-content form input {
-        margin-bottom: 10px;
-        padding: 10px;
-        border: 1px solid #ced4da; /* 输入框边框 */
-        border-radius: 4px;
+        margin-bottom: 14px;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 1.2rem;
         font-size: 1rem;
         outline: none;
-        transition: border-color 0.2s;
+        background: rgba(255,255,255,0.85);
+        box-shadow: 0 2px 8px rgba(76,201,240,0.08);
+        transition: box-shadow 0.2s, border 0.2s;
+        width: 100%;
+        color: #333;
     }
     .modal-content form input:focus {
-        border-color: #80bdff; /* 焦点边框颜色 */
-        box-shadow:0 0 0 0.2rem rgba(0,123,255,.25);
-    }
-    .modal-content form input:focus {
-        border-color: #80bdff; /* 焦点边框颜色 */
-        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        box-shadow: 0 0 0 3px #4cc9f0aa;
+        background: #fff;
     }
     .modal-content button[type='submit'] {
         margin-top: 10px;
-        background-color: #007bff; /* 提交按钮颜色 */
+        background: linear-gradient(90deg, #6c63ff 0%, #4cc9f0 100%);
         color: #fff;
         border: none;
-        padding: 10px 15px;
-        border-radius: 4px;
+        padding: 12px 0;
+        border-radius: 1.2rem;
         cursor: pointer;
-        font-size: 1rem;
-        transition: background-color 0.3s;
+        font-size: 1.1rem;
+        font-weight: 600;
+        width: 100%;
+        box-shadow: 0 2px 8px rgba(76,201,240,0.10);
+        transition: background 0.2s, transform 0.1s;
+        letter-spacing: 1px;
     }
-    
     .modal-content button[type='submit']:hover {
-        background-color: #0056b3; /* 悬停时颜色加深 */
+        background: linear-gradient(90deg, #4cc9f0 0%, #6c63ff 100%);
+        transform: translateY(-2px) scale(1.03);
     }
 .container {
         max-width: 1200px;
@@ -984,12 +1165,12 @@ async exportConfig(request, env, ctx) {
               const row = document.createElement('tr');
                row.innerHTML = \`
                  <td>\${config.id}</td>
-                  <td>\${config.name}</td>
-                  <td><a href="\${config.url}" target="_blank">\${config.url}</a></td>
+                  <td class="name-cell">\${config.name}</td>
+                  <td class="url-cell"><a href="\${config.url}" target="_blank">\${config.url}</a></td>
                   <td>\${config.logo ? \`<img src="\${config.logo}" style="width:30px;" />\` : 'N/A'}</td>
-                  <td>\${config.desc || 'N/A'}</td>
-                  <td>\${config.catelog}</td>
-				 <td>\${config.sort_order === 9999 ? '默认' : config.sort_order}</td> <!-- [新增] 显示排序值 -->
+                  <td class="desc-cell">\${config.desc || 'N/A'}</td>
+                  <td class="catelog-cell">\${config.catelog}</td>
+                  <td class="sort-cell">\${config.sort_order === 9999 ? '默认' : config.sort_order}</td> <!-- [新增] 显示排序值 -->
                   <td class="actions">
                     <button class="edit-btn" data-id="\${config.id}">编辑</button>
                     <button class="del-btn" data-id="\${config.id}">删除</button>
@@ -1208,11 +1389,12 @@ async exportConfig(request, env, ctx) {
                     const row = document.createElement('tr');
                     row.innerHTML = \`
                       <td>\${config.id}</td>
-                       <td>\${config.name}</td>
-                       <td><a href="\${config.url}" target="_blank">\${config.url}</a></td>
+                       <td class="name-cell">\${config.name}</td>
+                       <td class="url-cell"><a href="\${config.url}" target="_blank">\${config.url}</a></td>
                        <td>\${config.logo ? \`<img src="\${config.logo}" style="width:30px;" />\` : 'N/A'}</td>
-                       <td>\${config.desc || 'N/A'}</td>
-                       <td>\${config.catelog}</td>
+                       <td class="desc-cell">\${config.desc || 'N/A'}</td>
+                       <td class="catelog-cell">\${config.catelog}</td>
+                        <td class="sort-cell">\${config.sort_order === 9999 ? '默认' : config.sort_order}</td>
                         <td class="actions">
                             <button class="approve-btn" data-id="\${config.id}">批准</button>
                           <button class="reject-btn" data-id="\${config.id}">拒绝</button>
@@ -1309,165 +1491,198 @@ async exportConfig(request, env, ctx) {
         <title>管理员登录</title>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-          /* [优化] 全局重置与现代CSS最佳实践 */
           *, *::before, *::after {
             box-sizing: border-box;
           }
-          
           html, body {
-            height: 100%; /* 确保flex容器能撑满整个屏幕 */
+            height: 100%;
             margin: 0;
             padding: 0;
             font-family: 'Noto Sans SC', sans-serif;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
-
-          /* [优化] 主体布局，确保在任何设备上都完美居中 */
           body {
+            min-height: 100vh;
+            min-width: 100vw;
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #f8f9fa;
-            padding: 1rem; /* 为小屏幕提供安全边距 */
+            background: linear-gradient(135deg, #7209b7 0%, #4cc9f0 100%);
+            /* 渐变背景 */
+            overflow: hidden;
           }
-
-          /* [优化] 登录容器样式 */
           .login-container {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px M10px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0,0,0,0.08);
+            position: relative;
+            z-index: 1;
             width: 100%;
-            max-width: 380px;
-            animation: fadeIn 0.5s ease-out;
+            max-width: 400px;
+            padding: 2.5rem 2rem 2rem 2rem;
+            border-radius: 2rem;
+            background: rgba(255,255,255,0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+            backdrop-filter: blur(18px) saturate(1.5);
+            -webkit-backdrop-filter: blur(18px) saturate(1.5);
+            border: 2px solid rgba(255,255,255,0.25);
+            border-image: linear-gradient(120deg, #7209b7 0%, #4cc9f0 100%) 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.7s cubic-bezier(.4,0,.2,1);
           }
-          
           @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(-10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-
           .login-title {
-            font-size: 1.75rem; /* 稍大一点更醒目 */
+            font-size: 2.2rem;
             font-weight: 700;
             text-align: center;
-            margin: 0 0 1.5rem 0;
-            color: #333;
+            margin-bottom: 2rem;
+            background: linear-gradient(90deg, #7209b7 30%, #4cc9f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 2px;
           }
-
           .form-group {
-            margin-bottom: 1.25rem;
+            width: 100%;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
           }
-
           label {
-            display: block;
+            align-self: flex-start;
             margin-bottom: 0.5rem;
             font-weight: 500;
-            color: #555;
+            color: #3b1f75;
+            letter-spacing: 1px;
           }
-
           input[type="text"], input[type="password"] {
             width: 100%;
-            padding: 0.875rem 1rem; /* 调整内边距，手感更好 */
-            border: 1px solid #ddd;
-            border-radius: 6px; /* 稍大的圆角 */
-            font-size: 1rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
-          }
-
-          input:focus {
-            border-color: #7209b7;
+            padding: 0.9rem 1.1rem;
+            border: none;
+            border-radius: 1rem;
+            font-size: 1.1rem;
+            background: rgba(255,255,255,0.7);
+            box-shadow: 0 2px 8px rgba(76,201,240,0.08);
+            transition: box-shadow 0.2s, border 0.2s;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(114, 9, 183, 0.15);
+            color: #333;
           }
-
+          input[type="text"]:focus, input[type="password"]:focus {
+            box-shadow: 0 0 0 3px #4cc9f0aa;
+            background: rgba(255,255,255,0.95);
+          }
           button {
             width: 100%;
-            padding: 0.875rem;
-            background-color: #7209b7;
-            color: white;
+            padding: 0.95rem;
+            margin-top: 0.5rem;
+            background: linear-gradient(90deg, #7209b7 0%, #4cc9f0 100%);
+            color: #fff;
             border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: 500;
+            border-radius: 1rem;
+            font-size: 1.15rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 2px 8px rgba(76,201,240,0.12);
+            transition: background 0.2s, transform 0.1s;
+            letter-spacing: 1px;
           }
-
           button:hover {
-            background-color: #5a067c;
+            background: linear-gradient(90deg, #4cc9f0 0%, #7209b7 100%);
+            transform: translateY(-2px) scale(1.03);
           }
-          
-          button:active {
-            transform: scale(0.98);
-          }
-
           .error-message {
             color: #dc3545;
-            font-size: 0.875rem;
+            font-size: 0.95rem;
             margin-top: 0.5rem;
             text-align: center;
             display: none;
+            background: rgba(255,255,255,0.7);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0;
           }
-
           .back-link {
             display: block;
             text-align: center;
-            margin-top: 1.5rem;
-            color: #7209b7;
+            margin-top: 2rem;
+            color: #4cc9f0;
             text-decoration: none;
-            font-size: 0.875rem;
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            transition: color 0.2s;
           }
-
           .back-link:hover {
+            color: #7209b7;
             text-decoration: underline;
+          }
+          /* 背景装饰光斑 */
+          .bg-blur {
+            position: absolute;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.35;
+            pointer-events: none;
+          }
+          .bg-blur1 {
+            width: 400px; height: 400px;
+            top: -120px; left: -120px;
+            background: linear-gradient(120deg, #7209b7 0%, #4cc9f0 100%);
+          }
+          .bg-blur2 {
+            width: 300px; height: 300px;
+            bottom: -100px; right: -100px;
+            background: linear-gradient(120deg, #4cc9f0 0%, #7209b7 100%);
+          }
+          @media (max-width: 500px) {
+            .login-container {
+              padding: 1.5rem 0.7rem 1.2rem 0.7rem;
+              max-width: 98vw;
+            }
+            .login-title {
+              font-size: 1.4rem;
+            }
           }
         </style>
       </head>
       <body>
+        <div class="bg-blur bg-blur1"></div>
+        <div class="bg-blur bg-blur2"></div>
         <div class="login-container">
           <h1 class="login-title">管理员登录</h1>
-          <form id="loginForm">
+          <form id="loginForm" autocomplete="off">
             <div class="form-group">
               <label for="username">用户名</label>
-              <input type="text" id="username" name="username" required>
+              <input type="text" id="username" name="username" required autocomplete="username">
             </div>
             <div class="form-group">
               <label for="password">密码</label>
-              <input type="password" id="password" name="password" required>
+              <input type="password" id="password" name="password" required autocomplete="current-password">
             </div>
             <div class="error-message" id="errorMessage">用户名或密码错误</div>
             <button type="submit">登 录</button>
           </form>
           <a href="/" class="back-link">返回首页</a>
         </div>
-        
         <script>
           document.addEventListener('DOMContentLoaded', function() {
             const loginForm = document.getElementById('loginForm');
             const errorMessage = document.getElementById('errorMessage');
-            
             loginForm.addEventListener('submit', function(e) {
               e.preventDefault();
-              
               const username = document.getElementById('username').value;
               const password = document.getElementById('password').value;
-              
-              // 重定向到带有凭据的管理页面
               window.location.href = '/admin?name=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password);
             });
           });
         </script>
       </body>
       </html>`;
-      
       return new Response(html, {
         headers: { 'Content-Type': 'text/html; charset=utf-8' }
       });
@@ -1673,7 +1888,7 @@ async exportConfig(request, env, ctx) {
       <aside id="sidebar" class="sidebar fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 overflow-y-auto mobile-sidebar lg:transform-none transition-all duration-300">
         <div class="p-6">
           <div class="flex items-center justify-between mb-8">
-            <h2 class="text-2xl font-bold text-primary-500">琪舟阁</h2>
+            <h2 class="text-2xl font-bold sidebar-title-gradient">琪舟阁</h2>
             <button id="closeSidebar" class="p-1 rounded-full hover:bg-gray-100 lg:hidden">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
