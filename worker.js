@@ -1970,13 +1970,23 @@ async exportConfig(request, env, ctx) {
               <span id="siteCount">${catalog ? `${currentCatalog} · ${currentSites.length} 个网站` : `全部收藏 · ${sites.length} 个网站`}</span>
             </h2>
             <div class="text-sm px-5 py-2 rounded-full shadow-lg flex items-center gap-2 bg-gradient-to-r from-primary-200 via-secondary-100 to-accent-100 border border-primary-100">
-              <span id="hitokoto"><a href="https://github.com/BAYUEQI" target="_blank" id="hitokoto_text" class="bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent font-semibold">指路人，亦是摘星人</a></span>
+              <script>
+               fetch('https://v1.hitokoto.cn')
+                .then(response => response.json())
+                .then(data => {
+                const hitokoto = document.getElementById('hitokoto_text')
+                hitokoto.href = 'https://github.com/BAYUEQI' 
+                hitokoto.innerText = data.hitokoto
+                })
+                .catch(console.error)
+              </script>
+              <div id="hitokoto"><a href="#" target="_blank" id="hitokoto_text">指路人，亦是摘星人</a></div>
             </div>
           </div>
           <!-- 网站卡片网格 -->
           <div id="sitesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             ${currentSites.map(site => `
-              <div class="site-card group rounded-3xl shadow-2xl border-2 border-transparent hover:border-accent-300 bg-gradient-to-br from-white via-primary-50 to-accent-50 hover:from-primary-100 hover:to-accent-100 transition-all duration-300 relative overflow-hidden">
+              <div class="site-card group rounded-3xl shadow-2xl border-2 border-transparent hover:border-accent-300 bg-gradient-to-br from-white via-primary-50 to-accent-50 hover:from-primary-100 hover:to-accent-100 transition-all duration-300 relative overflow-hidden" data-name="${site.name || ''}" data-url="${site.url || ''}" data-catalog="${site.catelog || ''}">
                 <div class="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-primary-200 via-accent-100 to-secondary-100 rounded-full opacity-30 blur-2xl z-0"></div>
                 <div class="p-7 relative z-10 flex flex-col h-full">
                   <a href="${site.url}" target="_blank" class="block">
@@ -2282,15 +2292,17 @@ async exportConfig(request, env, ctx) {
           const searchInput = document.getElementById('searchInput');
           const sitesGrid = document.getElementById('sitesGrid');
           const siteCards = document.querySelectorAll('.site-card');
-          
+          const siteCountSpan = document.getElementById('siteCount');
+          const originalSiteCountText = siteCountSpan ? siteCountSpan.textContent : '';
+
           if (searchInput && sitesGrid) {
             searchInput.addEventListener('input', function() {
               const keyword = this.value.toLowerCase().trim();
               
               siteCards.forEach(card => {
-                const name = card.getAttribute('data-name').toLowerCase();
-                const url = card.getAttribute('data-url').toLowerCase();
-                const catalog = card.getAttribute('data-catalog').toLowerCase();
+                const name = (card.getAttribute('data-name') || '').toLowerCase();
+                const url = (card.getAttribute('data-url') || '').toLowerCase();
+                const catalog = (card.getAttribute('data-catalog') || '').toLowerCase();
                 
                 if (name.includes(keyword) || url.includes(keyword) || catalog.includes(keyword)) {
                   card.classList.remove('hidden');
@@ -2301,10 +2313,12 @@ async exportConfig(request, env, ctx) {
               
               // 搜索结果提示
               const visibleCards = sitesGrid.querySelectorAll('.site-card:not(.hidden)');
-              const countHeading = document.querySelector('h2');
-              if (countHeading) {
-                countHeading.textContent = keyword ? '搜索结果 · ' + visibleCards.length + ' 个网站' : 
-                  (window.location.search.includes('catalog=') ? catalog + ' · ' + visibleCards.length + ' 个网站' : '全部收藏 · ' + visibleCards.length + ' 个网站');
+              if (siteCountSpan) {
+                if (keyword) {
+                  siteCountSpan.textContent = '搜索结果 · ' + visibleCards.length + ' 个网站';
+                } else {
+                  siteCountSpan.textContent = originalSiteCountText;
+                }
               }
             });
           }
