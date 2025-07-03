@@ -6,12 +6,7 @@
   一个优雅、快速、易于部署的书签（网址）收藏与分享平台，完全基于 Cloudflare 全家桶构建。
 </p>
 
-<p align="center">
-  <a href="#✨-核心特性">特性</a> •
-  <a href="#🚀-快速部署">部署</a> •
-  <a href="#🛠️-自定义开发">开发</a> •
-  <a href="#🌟-贡献">贡献</a> •
-</p>
+
 
 <p align="center">
   <strong>在线体验:</strong> <a href="https://nav.520jacky.dpdns.org">https://nav.520jacky.dpdns.org</a>
