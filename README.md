@@ -9,10 +9,8 @@
 <p align="center">
   <a href="#✨-核心特性">特性</a> •
   <a href="#🚀-快速部署">部署</a> •
-  <a href="#⬆️-版本升级">升级</a> •
   <a href="#🛠️-自定义开发">开发</a> •
   <a href="#🌟-贡献">贡献</a> •
-  <a href="#changelog">更新日志</a>
 </p>
 
 <p align="center">
@@ -190,12 +188,3 @@ tailwind.config = {
 ## 📄 许可证
 
 本项目采用 [MIT](LICENSE) 许可证。
-
-## 📞 联系方式
-
--   **项目作者**: [@一只会飞的旺旺](https://github.com/wangwangit)
--   **项目链接**: [https://github.com/wangwangit/nav](https://github.com/wangwangit/nav)
-
-[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
-
-<p align="center">如果你喜欢这个项目，请给它一个 ⭐️！</p>
