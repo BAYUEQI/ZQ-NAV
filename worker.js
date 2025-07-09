@@ -2046,7 +2046,7 @@ async exportConfig(request, env, ctx) {
       </style>
       
       <!-- 返回顶部按钮 -->
-      <button id="backToTop" class="fixed bottom-8 right-8 p-3 rounded-full bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 text-white shadow-lg opacity-0 invisible transition-all duration-300 hover:brightness-110 hover:shadow-2xl border-2 border-primary-200">
+      <button id="backToTop" class="fixed bottom-8 right-8 z-50 p-3 rounded-full bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 text-white shadow-lg opacity-0 invisible transition-all duration-300 hover:brightness-110 hover:shadow-2xl border-2 border-primary-200">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 19l7-7 7 7" />
         </svg>
