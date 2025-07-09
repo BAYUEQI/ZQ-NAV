@@ -1959,6 +1959,31 @@ async exportConfig(request, env, ctx) {
             <p class="text-lg md:text-xl font-light bg-gradient-to-r from-primary-100 via-secondary-200 to-accent-200 bg-clip-text text-transparent mb-2">万千星河，总有一束光，指向你未曾抵达的远方</p>
           </div>
         </header>
+        <!-- 多引擎搜索框 -->
+        <div class="flex flex-col items-center justify-center mt-6 mb-8">
+          <form id="multiSearchForm" class="flex flex-row items-center gap-2 w-full max-w-xl">
+            <input
+              type="text"
+              id="multiSearchInput"
+              class="flex-1 px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"
+              placeholder="搜索全网内容（支持 Bing、Google、百度、GitHub）"
+              required
+            />
+            <select
+              id="multiSearchEngine"
+              class="px-3 py-2 border-2 border-primary-100 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition"
+            >
+              <option value="bing">Bing</option>
+              <option value="google">Google</option>
+              <option value="baidu">百度</option>
+              <option value="github">GitHub</option>
+            </select>
+            <button
+              type="submit"
+              class="px-5 py-2 border-2 border-primary-200 shadow-sm text-sm font-bold rounded-lg text-white bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 hover:from-primary-500 hover:to-accent-500 focus:outline-none focus:ring-2 focus:ring-primary-200 transition"
+            >搜索</button>
+          </form>
+        </div>
         <!-- 网站列表 -->
         <section class="max-w-7xl mx-auto px-4 sm:px-8 py-14">
           <!-- 当前分类/搜索提示 -->
@@ -2317,6 +2342,32 @@ async exportConfig(request, env, ctx) {
                   siteCountSpan.textContent = originalSiteCountText;
                 }
               }
+            });
+          }
+
+          // 多引擎搜索
+          const multiSearchForm = document.getElementById('multiSearchForm');
+          if (multiSearchForm) {
+            multiSearchForm.addEventListener('submit', function(e) {
+              e.preventDefault();
+              const keyword = document.getElementById('multiSearchInput').value.trim();
+              const engine = document.getElementById('multiSearchEngine').value;
+              let url = '';
+              switch (engine) {
+                case 'bing':
+                  url = `https://www.bing.com/search?q=${encodeURIComponent(keyword)}`;
+                  break;
+                case 'google':
+                  url = `https://www.google.com/search?q=${encodeURIComponent(keyword)}`;
+                  break;
+                case 'baidu':
+                  url = `https://www.baidu.com/s?wd=${encodeURIComponent(keyword)}`;
+                  break;
+                case 'github':
+                  url = `https://github.com/search?q=${encodeURIComponent(keyword)}`;
+                  break;
+              }
+              window.open(url, '_blank');
             });
           }
         });
