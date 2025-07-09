@@ -1959,6 +1959,71 @@ async exportConfig(request, env, ctx) {
             <p class="text-lg md:text-xl font-light bg-gradient-to-r from-primary-100 via-secondary-200 to-accent-200 bg-clip-text text-transparent mb-2">万千星河，总有一束光，指向你未曾抵达的远方</p>
           </div>
         </header>
+        <!-- 全局搜索框 -->
+        <div class="w-full flex flex-col items-center justify-center px-2 mt-4">
+          <form id="globalSearchForm" class="flex flex-col sm:flex-row items-center gap-2 w-full max-w-2xl">
+            <input id="globalSearchInput" type="text" placeholder="搜索网页"
+              class="w-full sm:flex-1 px-4 py-3 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition bg-white text-base"
+              required />
+            <div class="flex w-full sm:w-auto gap-2">
+              <select id="globalSearchEngine"
+                class="w-full sm:w-auto px-3 py-3 border-2 border-primary-100 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-base">
+                <option value="bing">Bing</option>
+                <option value="google">Google</option>
+                <option value="baidu">百度</option>
+                <option value="github">GitHub</option>
+              </select>
+              <button type="submit"
+                class="w-full sm:w-auto px-5 py-3 border-2 border-primary-200 shadow-sm text-base font-bold rounded-lg text-white bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 hover:from-primary-500 hover:to-accent-500 focus:outline-none focus:ring-2 focus:ring-primary-200 transition">
+                搜索
+              </button>
+            </div>
+          </form>
+        </div>
+        <style>
+        @media (max-width: 640px) {
+          #globalSearchForm {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+          }
+          #globalSearchInput, #globalSearchEngine, #globalSearchForm button {
+            width: 100% !important;
+            font-size: 1rem !important;
+          }
+          #globalSearchForm .flex {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+          }
+        }
+        </style>
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('globalSearchForm');
+            if(form) {
+              form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var kw = document.getElementById('globalSearchInput').value.trim();
+                var engine = document.getElementById('globalSearchEngine').value;
+                if(!kw) return;
+                var url = '';
+                switch(engine) {
+                  case 'bing':
+                    url = 'https://www.bing.com/search?q=' + encodeURIComponent(kw); break;
+                  case 'google':
+                    url = 'https://www.google.com/search?q=' + encodeURIComponent(kw); break;
+                  case 'baidu':
+                    url = 'https://www.baidu.com/s?wd=' + encodeURIComponent(kw); break;
+                  case 'github':
+                    url = 'https://github.com/search?q=' + encodeURIComponent(kw); break;
+                  default:
+                    url = 'https://www.bing.com/search?q=' + encodeURIComponent(kw);
+                }
+                window.open(url, '_blank');
+              });
+            }
+          });
+        </script>
         <!-- 网站列表 -->
         <section class="max-w-7xl mx-auto px-4 sm:px-8 py-14">
           <!-- 当前分类/搜索提示 -->
