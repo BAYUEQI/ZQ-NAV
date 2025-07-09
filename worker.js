@@ -1946,6 +1946,156 @@ async exportConfig(request, env, ctx) {
               后台管理
             </a>
           </div>
+          <!-- 自定义音乐播放器（侧边栏底部，API直连） -->
+          <div class="mt-8 mb-2">
+            <div class="rounded-2xl shadow-lg border-2 border-primary-100 bg-gradient-to-r from-white via-blue-50 to-blue-100 p-3 flex flex-col items-center w-full">
+              <div class="w-full text-center mb-2 text-sm font-bold text-primary-700">🎵 听点音乐</div>
+              <!-- 歌单切换输入框 -->
+              <div class="flex w-full items-center gap-2 mb-2">
+                <input id="playlistIdInput" type="text" placeholder="输入歌单ID" class="flex-1 px-2 py-1 rounded border border-primary-200 focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-xs" style="min-width:0;" />
+                <button id="changePlaylistBtn" class="px-3 py-1 rounded bg-gradient-to-r from-primary-200 via-secondary-200 to-accent-200 text-primary-800 font-bold shadow hover:from-primary-400 hover:to-accent-400 transition-all duration-200 text-xs">切换</button>
+              </div>
+              <div id="playlist-box" class="w-full mb-2 max-h-60 overflow-y-auto rounded-lg bg-white bg-opacity-70 border border-primary-100 shadow-inner"></div>
+              <audio id="custom-audio" controls class="w-full rounded-lg" preload="none" style="outline:none;width:100%!important;min-width:0;max-width:none;"></audio>
+              <div class="flex w-full justify-center items-center gap-4 mt-3">
+                <button id="prevSong" class="px-4 py-2 rounded-full bg-gradient-to-r from-primary-200 via-secondary-200 to-accent-200 text-primary-800 font-bold shadow hover:from-primary-400 hover:to-accent-400 transition-all duration-200 text-sm">⏮ 上一首</button>
+                <span id="currentSongName" class="text-sm text-primary-700 font-semibold px-2"></span>
+                <button id="nextSong" class="px-4 py-2 rounded-full bg-gradient-to-r from-primary-200 via-secondary-200 to-accent-200 text-primary-800 font-bold shadow hover:from-primary-400 hover:to-accent-400 transition-all duration-200 text-sm">下一首 ⏭</button>
+              </div>
+            </div>
+            <script>
+              let playlistId = 3136952023;
+              let songList = [];
+              let currentIndex = 0;
+              const playlistBox = document.getElementById('playlist-box');
+              const audio = document.getElementById('custom-audio');
+              const prevBtn = document.getElementById('prevSong');
+              const nextBtn = document.getElementById('nextSong');
+              const currentSongName = document.getElementById('currentSongName');
+              const playlistIdInput = document.getElementById('playlistIdInput');
+              const changePlaylistBtn = document.getElementById('changePlaylistBtn');
+
+              function playSong(index) {
+                if (!songList[index]) return;
+                const song = songList[index];
+                fetch('https://api.qizou.dpdns.org/song/url?id=' + song.id)
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data && data.data && data.data[0] && data.data[0].url) {
+                      audio.src = data.data[0].url;
+                      audio.play();
+                      currentSongName.innerText = song.name + (song.ar ? ' - ' + song.ar[0].name : '');
+                      currentIndex = index;
+                      renderPlaylist();
+                    } else {
+                      currentSongName.innerText = '无法播放';
+                    }
+                  })
+                  .catch(() => {
+                    currentSongName.innerText = '加载失败';
+                  });
+              }
+
+              function renderPlaylist() {
+                playlistBox.innerHTML = '';
+                songList.forEach((song, idx) => {
+                  const btn = document.createElement('button');
+                  btn.innerText = (idx+1) + '. ' + song.name + (song.ar ? ' - ' + song.ar[0].name : '');
+                  btn.className = 'block w-full text-left px-2 py-1 rounded-lg mb-1 text-xs transition-all duration-150 ' + (idx === currentIndex ? 'bg-gradient-to-r from-primary-200 via-secondary-200 to-accent-200 text-primary-900 font-bold shadow' : 'hover:bg-primary-100 text-primary-700');
+                  btn.onclick = function() { playSong(idx); };
+                  playlistBox.appendChild(btn);
+                });
+              }
+
+              function loadPlaylist(newId) {
+                playlistBox.innerText = '加载中...';
+                // 先尝试按歌单加载
+                fetch('https://api.qizou.dpdns.org/playlist/track/all?id=' + newId + '&limit=1000')
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data && data.songs && data.songs.length > 0) {
+                      // 歌单
+                      songList = data.songs;
+                      currentIndex = 0;
+                      renderPlaylist();
+                      playSong(0);
+                    } else {
+                      // 尝试按单曲加载
+                      fetch('https://api.qizou.dpdns.org/song/detail?ids=' + newId)
+                        .then(res => res.json())
+                        .then(songData => {
+                          if (songData && songData.songs && songData.songs.length > 0) {
+                            songList = [songData.songs[0]];
+                            currentIndex = 0;
+                            renderPlaylist();
+                            playSong(0);
+                          } else {
+                            playlistBox.innerText = '未找到歌单或歌曲';
+                            songList = [];
+                            currentIndex = 0;
+                            currentSongName.innerText = '';
+                            audio.src = '';
+                          }
+                        })
+                        .catch(() => {
+                          playlistBox.innerText = '加载失败';
+                          songList = [];
+                          currentIndex = 0;
+                          currentSongName.innerText = '';
+                          audio.src = '';
+                        });
+                    }
+                  })
+                  .catch(() => {
+                    playlistBox.innerText = '加载失败';
+                    songList = [];
+                    currentIndex = 0;
+                    currentSongName.innerText = '';
+                    audio.src = '';
+                  });
+              }
+
+              prevBtn.onclick = function() {
+                if (songList.length === 0) return;
+                let idx = currentIndex - 1;
+                if (idx < 0) idx = songList.length - 1;
+                playSong(idx);
+              };
+              nextBtn.onclick = function() {
+                if (songList.length === 0) return;
+                let idx = currentIndex + 1;
+                if (idx >= songList.length) idx = 0;
+                playSong(idx);
+              };
+
+              // 自动切下一首
+              audio.onended = function() {
+                nextBtn.onclick();
+              };
+
+              // 切换歌单按钮事件
+              changePlaylistBtn.onclick = function() {
+                const val = playlistIdInput.value.trim();
+                if (/^\\d+$/.test(val)) {
+                  playlistId = val;
+                  loadPlaylist(playlistId);
+                } else {
+                  playlistIdInput.value = '';
+                  playlistIdInput.placeholder = '请输入有效歌单ID';
+                }
+              };
+
+              // 回车也能切换
+              playlistIdInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                  changePlaylistBtn.onclick();
+                }
+              });
+
+              // 初始化加载默认歌单
+              loadPlaylist(playlistId);
+            </script>
+          </div>
         </div>
       </aside>
       
@@ -1961,39 +2111,41 @@ async exportConfig(request, env, ctx) {
         </header>
         <!-- 全局搜索框 -->
         <div class="w-full flex flex-col items-center justify-center px-2 mt-4">
-          <form id="globalSearchForm" class="flex flex-col sm:flex-row items-center gap-2 w-full max-w-2xl">
+          <form id="globalSearchForm" class="flex flex-row items-center gap-2 w-full max-w-2xl" style="flex-wrap:nowrap;">
             <input id="globalSearchInput" type="text" placeholder="搜索网页"
-              class="w-full sm:flex-1 px-4 py-3 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition bg-white text-base"
+              class="flex-1 px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition bg-white text-base min-w-0"
               required />
-            <div class="flex w-full sm:w-auto gap-2">
-              <select id="globalSearchEngine"
-                class="w-full sm:w-auto px-3 py-3 border-2 border-primary-100 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-base">
-                <option value="bing">Bing</option>
-                <option value="google">Google</option>
-                <option value="baidu">百度</option>
-                <option value="github">GitHub</option>
-              </select>
-              <button type="submit"
-                class="w-full sm:w-auto px-5 py-3 border-2 border-primary-200 shadow-sm text-base font-bold rounded-lg text-white bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 hover:from-primary-500 hover:to-accent-500 focus:outline-none focus:ring-2 focus:ring-primary-200 transition">
-                搜索
-              </button>
-            </div>
+            <select id="globalSearchEngine"
+              class="px-2 py-2 border-2 border-primary-100 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 text-base min-w-0" style="width:90px;">
+              <option value="bing">Bing</option>
+              <option value="google">Google</option>
+              <option value="baidu">百度</option>
+              <option value="github">GitHub</option>
+            </select>
+            <button type="submit"
+              class="px-4 py-2 border-2 border-primary-200 shadow-sm text-base font-bold rounded-lg text-white bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 hover:from-primary-500 hover:to-accent-500 focus:outline-none focus:ring-2 focus:ring-primary-200 transition min-w-0" style="white-space:nowrap;">搜索</button>
           </form>
         </div>
         <style>
         @media (max-width: 640px) {
           #globalSearchForm {
-            flex-direction: column !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
             gap: 0.5rem !important;
           }
           #globalSearchInput, #globalSearchEngine, #globalSearchForm button {
-            width: 100% !important;
+            min-width: 0 !important;
             font-size: 1rem !important;
           }
-          #globalSearchForm .flex {
-            flex-direction: column !important;
-            gap: 0.5rem !important;
-            width: 100% !important;
+          #globalSearchInput {
+            flex: 1 1 0%;
+          }
+          #globalSearchEngine {
+            width: 80px !important;
+          }
+          #globalSearchForm button {
+            padding-left: 0.8rem;
+            padding-right: 0.8rem;
           }
         }
         </style>
