@@ -180,7 +180,7 @@ function renderSiteCard(site) {
             const offset = (page - 1) * pageSize;
             try {
                 const { results } = await env.NAV_DB.prepare(`
-                        SELECT * FROM pending_sites ORDER BY create_time DESC LIMIT ? OFFSET ?
+                        SELECT * FROM pending_sites ORDER BY sort_order ASC, create_time DESC LIMIT ? OFFSET ?
                     `).bind(pageSize, offset).all();
                   const countResult = await env.NAV_DB.prepare(`
                       SELECT COUNT(*) as total FROM pending_sites
@@ -206,15 +206,22 @@ function renderSiteCard(site) {
                 if(results.length === 0) {
                     return this.errorResponse('Pending config not found', 404);
                 }
-                 const config = results[0];
-                 //- [优化] 批准时，插入的数据也包含了 sort_order 的默认值
+                const config = results[0];
+                // [修复] 批准时复用主列表排序逻辑
+                let targetSortOrder = 1;
+                if (!config.sort_order || config.sort_order === '' || config.sort_order === 9999) {
+                    const maxSortResult = await env.NAV_DB.prepare('SELECT MAX(sort_order) as max_sort FROM sites WHERE sort_order != 9999').first();
+                    targetSortOrder = (maxSortResult && maxSortResult.max_sort ? maxSortResult.max_sort + 1 : 1);
+                } else {
+                    targetSortOrder = parseInt(config.sort_order) || 1;
+                }
+                await env.NAV_DB.prepare('UPDATE sites SET sort_order = sort_order + 1 WHERE sort_order >= ? AND sort_order != 9999').bind(targetSortOrder).run();
                 await env.NAV_DB.prepare(`
                     INSERT INTO sites (name, url, logo, desc, catelog, sort_order)
-                    VALUES (?, ?, ?, ?, ?, 9999) 
-              `).bind(config.name, config.url, config.logo, config.desc, config.catelog).run();
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `).bind(config.name, config.url, config.logo, config.desc, config.catelog, targetSortOrder).run();
                 await env.NAV_DB.prepare('DELETE FROM pending_sites WHERE id = ?').bind(id).run();
-  
-                 return new Response(JSON.stringify({
+                return new Response(JSON.stringify({
                     code: 200,
                     message: 'Pending config approved successfully'
                 }),{
@@ -229,6 +236,15 @@ function renderSiteCard(site) {
         async rejectPendingConfig(request, env, ctx, id) {
             try{
                 await env.NAV_DB.prepare('DELETE FROM pending_sites WHERE id = ?').bind(id).run();
+                // [新增] 删除后自动重新排序
+                const { results } = await env.NAV_DB.prepare('SELECT id FROM pending_sites ORDER BY sort_order ASC, create_time DESC').all();
+                let updates = [];
+                for (let i = 0; i < results.length; i++) {
+                    updates.push(env.NAV_DB.prepare('UPDATE pending_sites SET sort_order = ? WHERE id = ?').bind(i + 1, results[i].id));
+                }
+                if (updates.length > 0) {
+                    await env.NAV_DB.batch(updates);
+                }
                 return new Response(JSON.stringify({
                     code: 200,
                     message: 'Pending config rejected successfully',
@@ -240,15 +256,15 @@ function renderSiteCard(site) {
        async submitConfig(request, env, ctx) {
           try{
               const config = await request.json();
-              const { name, url, logo, desc, catelog } = config;
+              const { name, url, logo, desc, catelog, sort_order } = config;
   
               if (!name || !url || !catelog ) {
                   return this.errorResponse('Name, URL and Catelog are required', 400);
               }
               await env.NAV_DB.prepare(`
-                  INSERT INTO pending_sites (name, url, logo, desc, catelog)
-                  VALUES (?, ?, ?, ?, ?)
-            `).bind(name, url, logo, desc, catelog).run();
+                  INSERT INTO pending_sites (name, url, logo, desc, catelog, sort_order)
+                  VALUES (?, ?, ?, ?, ?, ?)
+            `).bind(name, url, logo, desc, catelog, sort_order || 9999).run();
   
             return new Response(JSON.stringify({
               code: 201,
@@ -272,11 +288,26 @@ function renderSiteCard(site) {
               if (!name || !url || !catelog ) {
                   return this.errorResponse('Name, URL and Catelog are required', 400);
               }
+              
+              // [修改] 新的排序逻辑
+              let targetSortOrder = 1;
+              if (!sort_order || sort_order === '') {
+                  // 如果没填写排序号，自动分配最大序号+1
+                  const maxSortResult = await env.NAV_DB.prepare('SELECT MAX(sort_order) as max_sort FROM sites WHERE sort_order != 9999').first();
+                  targetSortOrder = (maxSortResult && maxSortResult.max_sort ? maxSortResult.max_sort + 1 : 1);
+              } else {
+                  // 如果填写了排序号，使用填写的值
+                  targetSortOrder = parseInt(sort_order) || 1;
+              }
+              
+              // 调整其他网站的排序号，为新网站腾出位置
+              await env.NAV_DB.prepare('UPDATE sites SET sort_order = sort_order + 1 WHERE sort_order >= ? AND sort_order != 9999').bind(targetSortOrder).run();
+              
               //- [优化] INSERT 语句增加了 sort_order 字段
               const insert = await env.NAV_DB.prepare(`
                     INSERT INTO sites (name, url, logo, desc, catelog, sort_order)
                     VALUES (?, ?, ?, ?, ?, ?)
-              `).bind(name, url, logo, desc, catelog, sort_order || 9999).run(); // 如果sort_order未提供，则默认为9999
+              `).bind(name, url, logo, desc, catelog, targetSortOrder).run(); // 使用目标排序号
   
             return new Response(JSON.stringify({
               code: 201,
@@ -297,13 +328,37 @@ function renderSiteCard(site) {
               const config = await request.json();
               //- [新增] 从请求体中获取 sort_order
               const { name, url, logo, desc, catelog, sort_order } = config;
+              
+              // [修改] 新的排序逻辑
+              let targetSortOrder = 9999; // 默认值
+              if (sort_order && sort_order !== '') {
+                  const inputSortOrder = parseInt(sort_order);
+                  if (!isNaN(inputSortOrder)) {
+                      targetSortOrder = inputSortOrder;
+                  }
+              }
+              
+              // 获取当前项目的排序号
+              const currentResult = await env.NAV_DB.prepare('SELECT sort_order FROM sites WHERE id = ?').bind(id).first();
+              const currentSortOrder = currentResult ? currentResult.sort_order : 9999;
+              
+              // 如果排序号发生变化，需要调整其他项目的排序号
+              if (targetSortOrder !== currentSortOrder && targetSortOrder !== 9999) {
+                  if (targetSortOrder < currentSortOrder) {
+                      // 新排序号更小，需要将中间的项目排序号+1
+                      await env.NAV_DB.prepare('UPDATE sites SET sort_order = sort_order + 1 WHERE sort_order >= ? AND sort_order < ? AND id != ? AND sort_order != 9999').bind(targetSortOrder, currentSortOrder, id).run();
+                  } else {
+                      // 新排序号更大，需要将中间的项目排序号-1
+                      await env.NAV_DB.prepare('UPDATE sites SET sort_order = sort_order - 1 WHERE sort_order > ? AND sort_order <= ? AND id != ? AND sort_order != 9999').bind(currentSortOrder, targetSortOrder, id).run();
+                  }
+              }
   
             //- [优化] UPDATE 语句增加了 sort_order 字段
             const update = await env.NAV_DB.prepare(`
                 UPDATE sites
                 SET name = ?, url = ?, logo = ?, desc = ?, catelog = ?, sort_order = ?, update_time = CURRENT_TIMESTAMP
                 WHERE id = ?
-            `).bind(name, url, logo, desc, catelog, sort_order || 9999, id).run();
+            `).bind(name, url, logo, desc, catelog, targetSortOrder, id).run();
             return new Response(JSON.stringify({
                 code: 200,
                 message: 'Config updated successfully',
@@ -317,6 +372,15 @@ function renderSiteCard(site) {
       async deleteConfig(request, env, ctx, id) {
           try{
               const del = await env.NAV_DB.prepare('DELETE FROM sites WHERE id = ?').bind(id).run();
+              // 删除后自动重新排序
+              const { results } = await env.NAV_DB.prepare('SELECT id FROM sites ORDER BY sort_order ASC, create_time DESC').all();
+              let updates = [];
+              for (let i = 0; i < results.length; i++) {
+                  updates.push(env.NAV_DB.prepare('UPDATE sites SET sort_order = ? WHERE id = ?').bind(i + 1, results[i].id));
+              }
+              if (updates.length > 0) {
+                  await env.NAV_DB.batch(updates);
+              }
               return new Response(JSON.stringify({
                   code: 200,
                   message: 'Config deleted successfully',
@@ -580,6 +644,9 @@ async exportConfig(request, env, ctx) {
         .actions button, .pagination button {
           border-radius: 1.2rem;
           font-size: 0.95rem;
+          /* [优化] 添加硬件加速，减少重绘 */
+          transform: translateZ(0);
+          will-change: transform;
         }
         .edit-btn {
           background: #4cc9f0;
@@ -600,6 +667,19 @@ async exportConfig(request, env, ctx) {
         }
         .pagination button:hover {
           background: #e3f0ff;
+        }
+        /* [优化] 添加按钮点击反馈 */
+        .pagination button:active {
+          transform: translateZ(0) scale(0.98);
+        }
+        /* [优化] 表格行优化 */
+        tr {
+          transition: background 0.2s;
+          /* [优化] 减少重绘 */
+          will-change: background-color;
+        }
+        tr:hover {
+          background: #f0f4fa;
         }
         #message.success {
           background: #d1fae5;
@@ -654,7 +734,6 @@ async exportConfig(request, env, ctx) {
                         <table id="configTable">
                             <thead>
                                 <tr>
-                                  <th>ID</th>
                                   <th>Name</th>
                                   <th>URL</th>
                                   <th>Logo</th>
@@ -671,6 +750,8 @@ async exportConfig(request, env, ctx) {
                         <div class="pagination">
                               <button id="prevPage" disabled>上一页</button>
                               <span id="currentPage">1</span>/<span id="totalPages">1</span>
+                              <input type="number" id="pageInput" min="1" style="width: 60px; text-align: center; margin: 0 5px;" placeholder="页码">
+                              <button id="goToPage">跳转</button>
                               <button id="nextPage" disabled>下一页</button>
                         </div>
                    </div>
@@ -680,12 +761,12 @@ async exportConfig(request, env, ctx) {
                    <table id="pendingTable">
                       <thead>
                         <tr>
-                            <th>ID</th>
                              <th>Name</th>
                              <th>URL</th>
                             <th>Logo</th>
                             <th>Description</th>
                             <th>Catelog</th>
+                            <th class="sort-th">排序</th> <!-- [新增] 表格头增加排序 -->
                             <th>Actions</th>
                         </tr>
                         </thead>
@@ -696,6 +777,8 @@ async exportConfig(request, env, ctx) {
                      <div class="pagination">
                       <button id="pendingPrevPage" disabled>上一页</button>
                        <span id="pendingCurrentPage">1</span>/<span id="pendingTotalPages">1</span>
+                       <input type="number" id="pendingPageInput" min="1" style="width: 60px; text-align: center; margin: 0 5px;" placeholder="页码">
+                       <button id="pendingGoToPage">跳转</button>
                       <button id="pendingNextPage" disabled>下一页</button>
                     </div>
                  </div>
@@ -1020,6 +1103,12 @@ async exportConfig(request, env, ctx) {
           const importFile = document.getElementById('importFile');
           const exportBtn = document.getElementById('exportBtn');
           
+          // [新增] 获取分页相关元素
+          const pageInput = document.getElementById('pageInput');
+          const goToPageBtn = document.getElementById('goToPage');
+          const pendingPageInput = document.getElementById('pendingPageInput');
+          const pendingGoToPageBtn = document.getElementById('pendingGoToPage');
+          
            const tabButtons = document.querySelectorAll('.tab-button');
             const tabContents = document.querySelectorAll('.tab-content');
           
@@ -1134,15 +1223,23 @@ async exportConfig(request, env, ctx) {
               if(keyword) {
                   url = \`/api/config?page=\${page}&pageSize=\${pageSize}&keyword=\${keyword}\`
               }
+              
+              // [优化] 显示加载状态
+              configTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">加载中...</td></tr>';
+              
               fetch(url)
                   .then(res => res.json())
                   .then(data => {
                       if (data.code === 200) {
                           totalItems = data.total;
                           currentPage = data.page;
-                                                 totalPagesSpan.innerText = Math.ceil(totalItems / pageSize);
+                          const totalPages = Math.ceil(totalItems / pageSize);
+                          
+                          // [优化] 批量更新DOM，减少重绘
+                          totalPagesSpan.innerText = totalPages;
                           currentPageSpan.innerText = currentPage;
-                          allConfigs = data.data; // 保存所有数据
+                          allConfigs = data.data;
+                          
                           renderConfig(allConfigs);
                           updatePaginationButtons();
                       } else {
@@ -1153,66 +1250,83 @@ async exportConfig(request, env, ctx) {
               })
           }
           function renderConfig(configs) {
-          configTableBody.innerHTML = '';
+          // [优化] 使用DocumentFragment减少DOM操作
+          const fragment = document.createDocumentFragment();
+          
            if (configs.length === 0) {
-                configTableBody.innerHTML = '<tr><td colspan="7">没有配置数据</td></tr>';
-                return
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6">没有配置数据</td>';
+                fragment.appendChild(row);
+            } else {
+                configs.forEach(config => {
+                    const row = document.createElement('tr');
+                     row.innerHTML = \`
+                        <td class="name-cell">\${config.name}</td>
+                        <td class="url-cell"><a href="\${config.url}" target="_blank">\${config.url}</a></td>
+                        <td>\${config.logo ? \`<img src="\${config.logo}" style="width:30px;" />\` : 'N/A'}</td>
+                        <td class="desc-cell">\${config.desc || 'N/A'}</td>
+                        <td class="catelog-cell">\${config.catelog}</td>
+                        <td class="sort-cell">\${config.sort_order === 9999 ? '默认' : config.sort_order}</td> <!-- [新增] 显示排序值 -->
+                        <td class="actions">
+                          <button class="edit-btn" data-id="\${config.id}">编辑</button>
+                          <button class="del-btn" data-id="\${config.id}">删除</button>
+                        </td>
+                     \`;
+                    fragment.appendChild(row);
+                });
             }
-          configs.forEach(config => {
-              const row = document.createElement('tr');
-               row.innerHTML = \`
-                 <td>\${config.id}</td>
-                  <td class="name-cell">\${config.name}</td>
-                  <td class="url-cell"><a href="\${config.url}" target="_blank">\${config.url}</a></td>
-                  <td>\${config.logo ? \`<img src="\${config.logo}" style="width:30px;" />\` : 'N/A'}</td>
-                  <td class="desc-cell">\${config.desc || 'N/A'}</td>
-                  <td class="catelog-cell">\${config.catelog}</td>
-                  <td class="sort-cell">\${config.sort_order === 9999 ? '默认' : config.sort_order}</td> <!-- [新增] 显示排序值 -->
-                  <td class="actions">
-                    <button class="edit-btn" data-id="\${config.id}">编辑</button>
-                    <button class="del-btn" data-id="\${config.id}">删除</button>
-                  </td>
-               \`;
-              configTableBody.appendChild(row);
-          });
+            
+            // [优化] 一次性清空和添加，减少DOM操作
+            configTableBody.innerHTML = '';
+            configTableBody.appendChild(fragment);
             bindActionEvents();
           }
           
           function bindActionEvents() {
-           document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = this.dataset.id;
-                    handleEdit(id);
-                })
-           });
-          
-          document.querySelectorAll('.del-btn').forEach(btn => {
-               btn.addEventListener('click', function() {
-                  const id = this.dataset.id;
-                   handleDelete(id)
-               })
-          })
+           // [修复] 使用事件委托，并确保只绑定一次事件监听器
+           // 先移除可能存在的旧事件监听器
+           configTableBody.removeEventListener('click', handleTableClick);
+           // 重新绑定事件监听器
+           configTableBody.addEventListener('click', handleTableClick);
           }
           
-    // [优化] 点击编辑时，获取并填充排序字段
+          // [新增] 将事件处理函数提取出来，便于移除和重新绑定
+          function handleTableClick(e) {
+               if (e.target.classList.contains('edit-btn')) {
+                   const id = e.target.dataset.id;
+                   handleEdit(id);
+               } else if (e.target.classList.contains('del-btn')) {
+                   const id = e.target.dataset.id;
+                   handleDelete(id);
+               }
+          }
+          
+    // [优化] 点击编辑时，直接使用当前数据，避免重复API调用
           function handleEdit(id) {
-            fetch(\`/api/config?page=1&pageSize=1000\`) // A simple way to get all configs to find the one to edit
-            .then(res => res.json())
-            .then(data => {
-                const configToEdit = data.data.find(c => c.id == id);
-                if (!configToEdit) {
-                    showMessage('找不到要编辑的数据', 'error');
-                    return;
-                }
-                document.getElementById('editId').value = configToEdit.id;
-                document.getElementById('editName').value = configToEdit.name;
-                document.getElementById('editUrl').value = configToEdit.url;
-                document.getElementById('editLogo').value = configToEdit.logo || '';
-                document.getElementById('editDesc').value = configToEdit.desc || '';
-                document.getElementById('editCatelog').value = configToEdit.catelog;
-                document.getElementById('editSortOrder').value = configToEdit.sort_order === 9999 ? '' : configToEdit.sort_order; // [新增]
-                editModal.style.display = 'block';
-            });
+            const configToEdit = allConfigs.find(c => c.id == id);
+            if (!configToEdit) {
+                showMessage('找不到要编辑的数据', 'error');
+                return;
+            }
+            
+            // [优化] 直接填充表单，避免DOM查询
+            const editId = document.getElementById('editId');
+            const editName = document.getElementById('editName');
+            const editUrl = document.getElementById('editUrl');
+            const editLogo = document.getElementById('editLogo');
+            const editDesc = document.getElementById('editDesc');
+            const editCatelog = document.getElementById('editCatelog');
+            const editSortOrder = document.getElementById('editSortOrder');
+            
+            editId.value = configToEdit.id;
+            editName.value = configToEdit.name;
+            editUrl.value = configToEdit.url;
+            editLogo.value = configToEdit.logo || '';
+            editDesc.value = configToEdit.desc || '';
+            editCatelog.value = configToEdit.catelog;
+            editSortOrder.value = configToEdit.sort_order === 9999 ? '' : configToEdit.sort_order;
+            
+            editModal.style.display = 'block';
           }
           function handleDelete(id) {
             if(!confirm('确认删除？')) return;
@@ -1255,6 +1369,25 @@ async exportConfig(request, env, ctx) {
             }
           });
           
+          // [新增] 跳转到指定页面
+          goToPageBtn.addEventListener('click', () => {
+            const targetPage = parseInt(pageInput.value);
+            const maxPage = Math.ceil(totalItems / pageSize);
+            if (targetPage && targetPage >= 1 && targetPage <= maxPage) {
+              fetchConfigs(targetPage);
+              pageInput.value = ''; // 清空输入框
+            } else {
+              showMessage('请输入有效的页码', 'error');
+            }
+          });
+          
+          // [新增] 回车键跳转
+          pageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              goToPageBtn.click();
+            }
+          });
+          
           addBtn.addEventListener('click', () => {
             const name = addName.value;
             const url = addUrl.value;
@@ -1275,7 +1408,8 @@ async exportConfig(request, env, ctx) {
              url,
              logo,
              desc,
-              catelog
+              catelog,
+              sort_order
           })
           }).then(res => res.json())
           .then(data => {
@@ -1357,13 +1491,19 @@ async exportConfig(request, env, ctx) {
           
           
           function fetchPendingConfigs(page = pendingCurrentPage) {
+                  // [优化] 显示加载状态
+                  pendingTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">加载中...</td></tr>';
+                  
                   fetch(\`/api/pending?page=\${page}&pageSize=\${pendingPageSize}\`)
                       .then(res => res.json())
                       .then(data => {
                         if (data.code === 200) {
                                pendingTotalItems = data.total;
                                pendingCurrentPage = data.page;
-                               pendingTotalPagesSpan.innerText = Math.ceil(pendingTotalItems/ pendingPageSize);
+                               const pendingTotalPages = Math.ceil(pendingTotalItems/ pendingPageSize);
+                               
+                               // [优化] 批量更新DOM
+                               pendingTotalPagesSpan.innerText = pendingTotalPages;
                                 pendingCurrentPageSpan.innerText = pendingCurrentPage;
                                allPendingConfigs = data.data;
                                  renderPendingConfig(allPendingConfigs);
@@ -1377,45 +1517,55 @@ async exportConfig(request, env, ctx) {
           }
           
             function renderPendingConfig(configs) {
-                  pendingTableBody.innerHTML = '';
+                  // [优化] 使用DocumentFragment减少DOM操作
+                  const fragment = document.createDocumentFragment();
+                  
                   if(configs.length === 0) {
-                      pendingTableBody.innerHTML = '<tr><td colspan="7">没有待审核数据</td></tr>';
-                      return
+                      const row = document.createElement('tr');
+                      row.innerHTML = '<td colspan="7">没有待审核数据</td>';
+                      fragment.appendChild(row);
+                  } else {
+                    configs.forEach(config => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = \`
+                          <td class="name-cell">\${config.name}</td>
+                           <td class="url-cell"><a href="\${config.url}" target="_blank">\${config.url}</a></td>
+                           <td>\${config.logo ? \`<img src="\${config.logo}" style="width:30px;" />\` : 'N/A'}</td>
+                           <td class="desc-cell">\${config.desc || 'N/A'}</td>
+                           <td class="catelog-cell">\${config.catelog}</td>
+                            <td class="sort-cell">\${config.sort_order === 9999 ? '默认' : config.sort_order}</td> <!-- [新增] 显示排序值 -->
+                            <td class="actions">
+                                <button class="approve-btn" data-id="\${config.id}">批准</button>
+                              <button class="reject-btn" data-id="\${config.id}">拒绝</button>
+                            </td>
+                          \`;
+                        fragment.appendChild(row);
+                    });
                   }
-                configs.forEach(config => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = \`
-                      <td>\${config.id}</td>
-                       <td class="name-cell">\${config.name}</td>
-                       <td class="url-cell"><a href="\${config.url}" target="_blank">\${config.url}</a></td>
-                       <td>\${config.logo ? \`<img src="\${config.logo}" style="width:30px;" />\` : 'N/A'}</td>
-                       <td class="desc-cell">\${config.desc || 'N/A'}</td>
-                       <td class="catelog-cell">\${config.catelog}</td>
-                        <td class="sort-cell">\${config.sort_order === 9999 ? '默认' : config.sort_order}</td>
-                        <td class="actions">
-                            <button class="approve-btn" data-id="\${config.id}">批准</button>
-                          <button class="reject-btn" data-id="\${config.id}">拒绝</button>
-                        </td>
-                      \`;
-                    pendingTableBody.appendChild(row);
-                });
-                bindPendingActionEvents();
+                  
+                  // [优化] 一次性清空和添加
+                  pendingTableBody.innerHTML = '';
+                  pendingTableBody.appendChild(fragment);
+                  bindPendingActionEvents();
             }
            function bindPendingActionEvents() {
-               document.querySelectorAll('.approve-btn').forEach(btn => {
-                   btn.addEventListener('click', function() {
-                       const id = this.dataset.id;
-                       handleApprove(id);
-                   })
-               });
-              document.querySelectorAll('.reject-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                         const id = this.dataset.id;
-                         handleReject(id);
-                     })
-              })
+               // [修复] 使用事件委托，并确保只绑定一次事件监听器
+               // 先移除可能存在的旧事件监听器
+               pendingTableBody.removeEventListener('click', handlePendingTableClick);
+               // 重新绑定事件监听器
+               pendingTableBody.addEventListener('click', handlePendingTableClick);
            }
-          
+           
+           // [新增] 将待审核表格事件处理函数提取出来
+           function handlePendingTableClick(e) {
+               if (e.target.classList.contains('approve-btn')) {
+                   const id = e.target.dataset.id;
+                   handleApprove(id);
+               } else if (e.target.classList.contains('reject-btn')) {
+                   const id = e.target.dataset.id;
+                   handleReject(id);
+               }
+           }
           function handleApprove(id) {
              if (!confirm('确定批准吗？')) return;
              fetch(\`/api/pending/\${id}\`, {
@@ -1464,7 +1614,25 @@ async exportConfig(request, env, ctx) {
                    fetchPendingConfigs(pendingCurrentPage + 1)
                }
             });
-          
+            
+            // [新增] 待审核列表跳转到指定页面
+            pendingGoToPageBtn.addEventListener('click', () => {
+              const targetPage = parseInt(pendingPageInput.value);
+              const maxPage = Math.ceil(pendingTotalItems / pendingPageSize);
+              if (targetPage && targetPage >= 1 && targetPage <= maxPage) {
+                fetchPendingConfigs(targetPage);
+                pendingPageInput.value = ''; // 清空输入框
+              } else {
+                showMessage('请输入有效的页码', 'error');
+              }
+            });
+            
+            // [新增] 待审核列表回车键跳转
+            pendingPageInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                pendingGoToPageBtn.click();
+              }
+            });
           fetchConfigs();
           fetchPendingConfigs();
           `
@@ -2305,6 +2473,10 @@ async exportConfig(request, env, ctx) {
                   ${catalogs.map(cat => `<option value="${cat}">`).join('')}
                 </datalist>
               </div>
+              <div>
+                <label for="addSiteSortOrder" class="block text-sm font-medium text-gray-700 mb-1">排序（可选）</label>
+                <input type="number" id="addSiteSortOrder" class="mt-1 block w-full px-4 py-2 border-2 border-primary-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition" placeholder="不填则自动排到最后"/>
+              </div>
               <div class="flex justify-end pt-6 gap-3">
                 <button type="button" id="cancelAddSite" class="bg-gray-100 text-gray-600 border border-gray-200 rounded-lg px-5 py-2 font-medium hover:bg-gray-200 transition">取消</button>
                 <button type="submit" class="inline-flex justify-center px-6 py-2 border-2 border-primary-200 shadow-sm text-sm font-bold rounded-lg text-white bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 hover:from-primary-500 hover:to-accent-500 focus:outline-none focus:ring-2 focus:ring-primary-200 transition">提交</button>
@@ -2463,13 +2635,14 @@ async exportConfig(request, env, ctx) {
               const logo = document.getElementById('addSiteLogo').value;
               const desc = document.getElementById('addSiteDesc').value;
               const catelog = document.getElementById('addSiteCatelog').value;
+              const sort_order = document.getElementById('addSiteSortOrder').value;
               
               fetch('/api/config/submit', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, url, logo, desc, catelog })
+                body: JSON.stringify({ name, url, logo, desc, catelog, sort_order })
               })
               .then(res => res.json())
               .then(data => {
