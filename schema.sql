@@ -25,3 +25,5 @@ create_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```创建排列顺序
 ALTER TABLE sites ADD COLUMN sort_order INTEGER DEFAULT 9999;
+-- 创建审核列表排列顺序
+ALTER TABLE pending_sites ADD COLUMN sort_order INTEGER DEFAULT 9999;
