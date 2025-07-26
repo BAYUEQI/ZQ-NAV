@@ -2146,7 +2146,7 @@ async exportConfig(request, env, ctx) {
               function playSong(index) {
                 if (!songList[index]) return;
                 const song = songList[index];
-                fetch('https://api.qizou.dpdns.org/song/url?id=' + song.id)
+                fetch('https://musicapi.qizou.dpdns.org/song/url?id=' + song.id)
                   .then(res => res.json())
                   .then(data => {
                     if (data && data.data && data.data[0] && data.data[0].url) {
@@ -2178,7 +2178,7 @@ async exportConfig(request, env, ctx) {
               function loadPlaylist(newId) {
                 playlistBox.innerText = '加载中...';
                 // 先尝试按歌单加载
-                fetch('https://api.qizou.dpdns.org/playlist/track/all?id=' + newId + '&limit=1000')
+                fetch('https://mucisapi.qizou.dpdns.org/playlist/track/all?id=' + newId + '&limit=1000')
                   .then(res => res.json())
                   .then(data => {
                     if (data && data.songs && data.songs.length > 0) {
@@ -2189,7 +2189,7 @@ async exportConfig(request, env, ctx) {
                       playSong(0);
                     } else {
                       // 尝试按单曲加载
-                      fetch('https://api.qizou.dpdns.org/song/detail?ids=' + newId)
+                      fetch('https://musicapi.qizou.dpdns.org/song/detail?ids=' + newId)
                         .then(res => res.json())
                         .then(songData => {
                           if (songData && songData.songs && songData.songs.length > 0) {
