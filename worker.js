@@ -2178,7 +2178,7 @@ async exportConfig(request, env, ctx) {
               function loadPlaylist(newId) {
                 playlistBox.innerText = '加载中...';
                 // 先尝试按歌单加载
-                fetch('https://mucisapi.qizou.dpdns.org/playlist/track/all?id=' + newId + '&limit=1000')
+                fetch('https://musicapi.qizou.dpdns.org/playlist/track/all?id=' + newId + '&limit=1000')
                   .then(res => res.json())
                   .then(data => {
                     if (data && data.songs && data.songs.length > 0) {
